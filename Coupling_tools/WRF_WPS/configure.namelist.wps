@@ -1,0 +1,83 @@
+#========================================================================
+# Configuration parameters to be used in run_wps.bash and run_real.bash
+# to generate namelist.wps and namelist.input
+#========================================================================
+#
+# Further Information:   
+# http://www.croco-ocean.org
+#  
+# This file is part of CROCOTOOLS
+#
+# CROCOTOOLS is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published
+# by the Free Software Foundation; either version 2 of the License,
+# or (at your option) any later version.
+#
+# CROCOTOOLS is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+# MA  02111-1307  USA
+#
+# Copyright (c) 2018 S. Jullien
+# swen.jullien@ifremer.fr
+# --------------------------------------------------
+
+# Dates to process
+#-----------------
+start_y=2005
+start_m=01
+start_d=01
+start_h=00
+
+end_y=2005
+end_m=01
+end_d=31
+end_h=18
+
+# Domains
+#---------
+max_domains=1       # Nb domains
+#
+# Parent domain (d01)
+dx=30               # horizonal resolution dx=dy in [kml]
+xdim_d01=56         # number of points in x
+ydim_d01=50         # number of points in y
+#
+# Nest 1 (d02): information read only if max_domains>1
+refine_d02=5        # refinement coefficient from parent
+i_str_d02=32        # starting index in x-dir from the parent domain
+j_str_d02=153       # starting index in y-dir from the parent domain
+xdim_d02=456        # nb of points, must check: xdim_child=N*refine_coef+1
+ydim_d02=476        # nb of points, must check: ydim_child=M*refine_coef+1
+#
+# Nest 2 (d03): information read only if max_domains>2
+refine_d03=3        # refinement coefficient from previous nest
+i_str_d03=35        # starting index in x-dir from the previous nest
+j_str_d03=24        # starting index in y-dir from the previous nest
+xdim_d03=277        # nb of points, must check: xdim_child=N*refine_coef+1
+ydim_d03=349        # nb of points, must check: ydim_child=M*refine_coef+1
+
+# Other information for geogrid 
+#-------------------------------
+central_lat=-32.0   # central longitude of the parent domain
+central_lon=15.0    # central latitude of the parent domain
+projection='mercator' # projection used
+#
+# resolution of the topographic data to use for each domain 
+topo_res_d01='30s+10m'
+topo_res_d02='3s+30s'
+topo_res_d03='3s+30s'
+
+# Other information for ungrib
+#------------------------------
+obc_freq_h=6        # boundary condition frequency [hour]
+#
+# suffix for Vtable to use
+LBC_type="CFSR_press_pgbh06" # for initial and boundary forcing
+LSM_type="CFSR_sfc_flxf06"   # for surface data (if different from boundary data)
+ 

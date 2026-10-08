@@ -1,0 +1,478 @@
+archivo,usa_netcdf,estado,problemas_detectados,descripcion
+Aforc_CFSR/oct_add_radswbio_CFSR.m,si,pendiente,D,orden de dimensiones sin transponer/permutar
+Aforc_CFSR/oct_add_spinup_QSCAT.m,si,pendiente,D,orden de dimensiones sin transponer/permutar
+Aforc_CFSR/oct_daysinmonth.m,no,sin NetCDF,,
+Aforc_CFSR/oct_download_CFSR.m,no,sin NetCDF,,
+Aforc_CFSR/oct_extract_CFSR.m,no,sin NetCDF,,
+Aforc_CFSR/oct_get_CFSR_grid.m,no,sin NetCDF,,
+Aforc_CFSR/oct_get_dx.m,no,sin NetCDF,,
+Aforc_CFSR/oct_get_filename_CFSR.m,no,sin NetCDF,,
+Aforc_CFSR/oct_interp_CFSR.m,si,pendiente,CDPT,"línea rota por el convertidor ([conv] 0-based); orden de dimensiones sin transponer/permutar; no parsea en Octave; sintaxis octcdf/netcdf-toolbox (nc{..}, ncdouble, sync, .FillValue_)"
+Aforc_CFSR/oct_make_CFSR.m,si,pendiente,CDP,línea rota por el convertidor ([conv] 0-based); orden de dimensiones sin transponer/permutar; no parsea en Octave
+Aforc_CFSR/oct_prepro_cfsr.m,no,sin NetCDF,,
+Aforc_CFSR/oct_process_coast_CFSR.m,si,pendiente,DI,orden de dimensiones sin transponer/permutar; hiperslab perdido: getVar sin start/count dentro de un bucle
+Aforc_ECMWF/oct_extract_ECMWF.m,si,pendiente,DP,orden de dimensiones sin transponer/permutar; no parsea en Octave
+Aforc_ECMWF/oct_get_ECMWF_subgrid.m,si,pendiente,D,orden de dimensiones sin transponer/permutar
+Aforc_ECMWF/oct_interp_ECMWF.m,si,pendiente,CDPT,"línea rota por el convertidor ([conv] 0-based); orden de dimensiones sin transponer/permutar; no parsea en Octave; sintaxis octcdf/netcdf-toolbox (nc{..}, ncdouble, sync, .FillValue_)"
+Aforc_ECMWF/oct_make_ECMWF.m,si,pendiente,CDP,línea rota por el convertidor ([conv] 0-based); orden de dimensiones sin transponer/permutar; no parsea en Octave
+Aforc_ECMWF/oct_make_ECMWF_daily.m,si,pendiente,CDP,línea rota por el convertidor ([conv] 0-based); orden de dimensiones sin transponer/permutar; no parsea en Octave
+Aforc_ECMWF/oct_make_bry_wkb_ECMWF.m,si,pendiente,CDP,línea rota por el convertidor ([conv] 0-based); orden de dimensiones sin transponer/permutar; no parsea en Octave
+Aforc_ECMWF/oct_reformat_ECMWF.m,si,pendiente,D,orden de dimensiones sin transponer/permutar
+Aforc_ECMWF/oct_reformat_ECMWF_daily.m,si,pendiente,DI,orden de dimensiones sin transponer/permutar; hiperslab perdido: getVar sin start/count dentro de un bucle
+Aforc_ECMWF/oct_write_ECMWF.m,si,pendiente,PT,"no parsea en Octave; sintaxis octcdf/netcdf-toolbox (nc{..}, ncdouble, sync, .FillValue_)"
+Aforc_ECMWF/oct_write_ECMWF_Mask.m,si,pendiente,,
+Aforc_ERA5/oct_interp_ERA5.m,si,corregida (cadena principal),,
+Aforc_ERA5/oct_make_ERA5.m,si,corregida (cadena principal),,
+Aforc_ERA5/oct_make_bry_wkb_ERA5.m,si,pendiente,CDP,línea rota por el convertidor ([conv] 0-based); orden de dimensiones sin transponer/permutar; no parsea en Octave
+Aforc_NCEP/oct_add_spinup_QSCAT.m,si,pendiente,D,orden de dimensiones sin transponer/permutar
+Aforc_NCEP/oct_daysinmonth.m,no,sin NetCDF,,
+Aforc_NCEP/oct_download_NCEP.m,si,pendiente,D,orden de dimensiones sin transponer/permutar
+Aforc_NCEP/oct_extract_NCEP.m,si,pendiente,DP,orden de dimensiones sin transponer/permutar; no parsea en Octave
+Aforc_NCEP/oct_extract_NCEP_Mask_Mydata.m,si,pendiente,D,orden de dimensiones sin transponer/permutar
+Aforc_NCEP/oct_get_NCEP_grid.m,si,pendiente,D,orden de dimensiones sin transponer/permutar
+Aforc_NCEP/oct_get_dx.m,no,sin NetCDF,,
+Aforc_NCEP/oct_interp_NCEP.m,si,pendiente,CDPT,"línea rota por el convertidor ([conv] 0-based); orden de dimensiones sin transponer/permutar; no parsea en Octave; sintaxis octcdf/netcdf-toolbox (nc{..}, ncdouble, sync, .FillValue_)"
+Aforc_NCEP/oct_make_NCEP.m,si,pendiente,CDP,línea rota por el convertidor ([conv] 0-based); orden de dimensiones sin transponer/permutar; no parsea en Octave
+Aforc_NCEP/oct_make_NCEP_withQSCAT_daily.m,si,pendiente,CDP,línea rota por el convertidor ([conv] 0-based); orden de dimensiones sin transponer/permutar; no parsea en Octave
+Aforc_NCEP/oct_write_NCEP.m,si,pendiente,PT,"no parsea en Octave; sintaxis octcdf/netcdf-toolbox (nc{..}, ncdouble, sync, .FillValue_)"
+Aforc_NCEP/oct_write_NCEP_Mask.m,si,pendiente,,
+Aforc_QuikSCAT/oct_create_forcing_QSCAT.m,si,pendiente,T,"sintaxis octcdf/netcdf-toolbox (nc{..}, ncdouble, sync, .FillValue_)"
+Aforc_QuikSCAT/oct_download_QSCAT.m,no,sin NetCDF,,
+Aforc_QuikSCAT/oct_get_QSCAT_grid.m,no,sin NetCDF,,
+Aforc_QuikSCAT/oct_make_QSCAT_clim.m,si,pendiente,CDP,línea rota por el convertidor ([conv] 0-based); orden de dimensiones sin transponer/permutar; no parsea en Octave
+Aforc_QuikSCAT/oct_make_QSCAT_daily.m,si,pendiente,CDP,línea rota por el convertidor ([conv] 0-based); orden de dimensiones sin transponer/permutar; no parsea en Octave
+Coupling_tools/CROCO/oct_find_childgrid_inparentgrid.m,si,pendiente,CDP,línea rota por el convertidor ([conv] 0-based); orden de dimensiones sin transponer/permutar; no parsea en Octave
+Coupling_tools/CROCO/oct_make_grid_from_WRF.m,si,pendiente,D,orden de dimensiones sin transponer/permutar
+Coupling_tools/CROCO/oct_prepro_cfsr.m,no,sin NetCDF,,
+Coupling_tools/CROCO/oct_prepro_soda.m,no,sin NetCDF,,
+Coupling_tools/WW3/oct_make_ww3_grd_input_files_from_croco_grd.m,si,pendiente,D,orden de dimensiones sin transponer/permutar
+Diagnostic_tools/EKE/oct_add_streamarrows.m,no,sin NetCDF,,
+Diagnostic_tools/EKE/oct_geostrophy.m,no,sin NetCDF,,
+Diagnostic_tools/EKE/oct_get_aviso_eke.m,no,sin NetCDF,,
+Diagnostic_tools/EKE/oct_get_climato_eke.m,no,sin NetCDF,,
+Diagnostic_tools/EKE/oct_get_croco_eke.m,si,pendiente,DIPX,"orden de dimensiones sin transponer/permutar; hiperslab perdido: getVar sin start/count dentro de un bucle; no parsea en Octave; función inexistente en Octave (datetime, getVar(...,'double'))"
+Diagnostic_tools/EKE/oct_get_topex2014.m,si,pendiente,D,orden de dimensiones sin transponer/permutar
+Diagnostic_tools/EKE/oct_get_tpx_grid.m,no,sin NetCDF,,
+Diagnostic_tools/EKE/oct_nine_point_avg.m,no,sin NetCDF,,
+Diagnostic_tools/EKE/oct_plot_eke.m,no,sin NetCDF,,
+Diagnostic_tools/EKE/oct_start.m,no,sin NetCDF,,
+Diagnostic_tools/Eddy_detect/SOURCES/oct_clean_ppm.m,no,sin NetCDF,,
+Diagnostic_tools/Eddy_detect/SOURCES/oct_create_eddynetcdf.m,si,pendiente,A,id NetCDF equivocado o reDef tras create
+Diagnostic_tools/Eddy_detect/SOURCES/oct_general_dist.m,no,sin NetCDF,,
+Diagnostic_tools/Eddy_detect/SOURCES/oct_get_eddies_mixed.m,no,sin NetCDF,,
+Diagnostic_tools/Eddy_detect/SOURCES/oct_get_eddyspeeds.m,no,sin NetCDF,,
+Diagnostic_tools/Eddy_detect/SOURCES/oct_get_locmax.m,no,sin NetCDF,,
+Diagnostic_tools/Eddy_detect/SOURCES/oct_get_locmin.m,no,sin NetCDF,,
+Diagnostic_tools/Eddy_detect/SOURCES/oct_get_neigbours.m,no,sin NetCDF,,
+Diagnostic_tools/Eddy_detect/SOURCES/oct_get_one_eddy.m,no,sin NetCDF,,
+Diagnostic_tools/Eddy_detect/SOURCES/oct_ke_aviso.m,no,sin NetCDF,,
+Diagnostic_tools/Eddy_detect/SOURCES/oct_nearest_aviso_date.m,no,sin NetCDF,,
+Diagnostic_tools/Eddy_detect/SOURCES/oct_okubo_aviso.m,no,sin NetCDF,,
+Diagnostic_tools/Eddy_detect/SOURCES/oct_read_eddynetcdf.m,si,pendiente,D,orden de dimensiones sin transponer/permutar
+Diagnostic_tools/Eddy_detect/SOURCES/oct_write_eddynetcdf.m,si,pendiente,C,línea rota por el convertidor ([conv] 0-based)
+Diagnostic_tools/Eddy_detect/oct_eddy_animate_aviso.m,si,pendiente,D,orden de dimensiones sin transponer/permutar
+Diagnostic_tools/Eddy_detect/oct_eddy_animate_model.m,si,pendiente,D,orden de dimensiones sin transponer/permutar
+Diagnostic_tools/Eddy_detect/oct_eddy_detect_aviso.m,no,sin NetCDF,,
+Diagnostic_tools/Eddy_detect/oct_eddy_detect_model.m,si,pendiente,DI,orden de dimensiones sin transponer/permutar; hiperslab perdido: getVar sin start/count dentro de un bucle
+Diagnostic_tools/Eddy_detect/oct_eddy_select.m,si,pendiente,A,id NetCDF equivocado o reDef tras create
+Diagnostic_tools/Eddy_detect/oct_eddy_stats_eulerian_yearly.m,si,pendiente,D,orden de dimensiones sin transponer/permutar
+Diagnostic_tools/Eddy_detect/oct_eddy_stats_lagrangian_yearly.m,si,pendiente,D,orden de dimensiones sin transponer/permutar
+Diagnostic_tools/Eddy_detect/oct_eddy_tracking.m,si,pendiente,CZ,línea rota por el convertidor ([conv] 0-based); putVar con escalar (escribe memoria basura)
+Diagnostic_tools/KmKe/oct_croco_advection.m,no,sin NetCDF,,
+Diagnostic_tools/KmKe/oct_croco_horiz_trcflux.m,no,sin NetCDF,,
+Diagnostic_tools/KmKe/oct_croco_vert_trcflux.m,no,sin NetCDF,,
+Diagnostic_tools/KmKe/oct_get_kmke.m,si,pendiente,DIT,"orden de dimensiones sin transponer/permutar; hiperslab perdido: getVar sin start/count dentro de un bucle; sintaxis octcdf/netcdf-toolbox (nc{..}, ncdouble, sync, .FillValue_)"
+Diagnostic_tools/KmKe/oct_get_wvelocity.m,no,sin NetCDF,,
+Diagnostic_tools/KmKe/oct_perm.m,no,sin NetCDF,,
+Diagnostic_tools/KmKe/oct_start.m,no,sin NetCDF,,
+Diagnostic_tools/Transport/oct_get_a.m,no,sin NetCDF,,
+Diagnostic_tools/Transport/oct_get_bcpsi.m,no,sin NetCDF,,
+Diagnostic_tools/Transport/oct_get_psi0.m,no,sin NetCDF,,
+Diagnostic_tools/Transport/oct_get_transport_func.m,si,pendiente,DT,"orden de dimensiones sin transponer/permutar; sintaxis octcdf/netcdf-toolbox (nc{..}, ncdouble, sync, .FillValue_)"
+Diagnostic_tools/Transport/oct_inv_elliptic.m,no,sin NetCDF,,
+Diagnostic_tools/Transport/oct_plot_transport.m,no,sin NetCDF,,
+Diagnostic_tools/Transport/oct_step_sor2.m,no,sin NetCDF,,
+Diagnostic_tools/Transport/oct_vintegr2.m,no,sin NetCDF,,
+Diagnostic_tools/oct_croco_anim.m,si,pendiente,,
+Diagnostic_tools/oct_croco_diags.m,si,pendiente,DI,orden de dimensiones sin transponer/permutar; hiperslab perdido: getVar sin start/count dentro de un bucle
+Diagnostic_tools/oct_get_3dvars.m,si,pendiente,T,"sintaxis octcdf/netcdf-toolbox (nc{..}, ncdouble, sync, .FillValue_)"
+Diagnostic_tools/oct_get_Meddy.m,si,pendiente,CDT,"línea rota por el convertidor ([conv] 0-based); orden de dimensiones sin transponer/permutar; sintaxis octcdf/netcdf-toolbox (nc{..}, ncdouble, sync, .FillValue_)"
+Diagnostic_tools/oct_get_Mmean.m,si,pendiente,CDT,"línea rota por el convertidor ([conv] 0-based); orden de dimensiones sin transponer/permutar; sintaxis octcdf/netcdf-toolbox (nc{..}, ncdouble, sync, .FillValue_)"
+Diagnostic_tools/oct_get_Seddy.m,si,pendiente,CDT,"línea rota por el convertidor ([conv] 0-based); orden de dimensiones sin transponer/permutar; sintaxis octcdf/netcdf-toolbox (nc{..}, ncdouble, sync, .FillValue_)"
+Diagnostic_tools/oct_get_Smean.m,si,pendiente,CDT,"línea rota por el convertidor ([conv] 0-based); orden de dimensiones sin transponer/permutar; sintaxis octcdf/netcdf-toolbox (nc{..}, ncdouble, sync, .FillValue_)"
+Diagnostic_tools/oct_get_avgtracer.m,si,pendiente,D,orden de dimensiones sin transponer/permutar
+Diagnostic_tools/oct_plot_diags.m,no,sin NetCDF,,
+Diagnostic_tools/oct_u2rho_3d.m,no,sin NetCDF,,
+Diagnostic_tools/oct_v2rho_3d.m,no,sin NetCDF,,
+Forecast_tools/oct_download_GFS.m,no,sin NetCDF,,
+Forecast_tools/oct_download_mercator_frcst_python.m,no,sin NetCDF,,
+Forecast_tools/oct_get_GDAS.m,no,sin NetCDF,,
+Forecast_tools/oct_get_GFS.m,no,sin NetCDF,,
+Forecast_tools/oct_get_GFS_fname.m,no,sin NetCDF,,
+Forecast_tools/oct_get_GFS_subgrid.m,no,sin NetCDF,,
+Forecast_tools/oct_interp_OGCM_frcst.m,si,pendiente,CDPT,"línea rota por el convertidor ([conv] 0-based); orden de dimensiones sin transponer/permutar; no parsea en Octave; sintaxis octcdf/netcdf-toolbox (nc{..}, ncdouble, sync, .FillValue_)"
+Forecast_tools/oct_make_GFS.m,si,pendiente,CDIP,línea rota por el convertidor ([conv] 0-based); orden de dimensiones sin transponer/permutar; hiperslab perdido: getVar sin start/count dentro de un bucle; no parsea en Octave
+Forecast_tools/oct_make_OGCM_mercator_frcst.m,si,pendiente,D,orden de dimensiones sin transponer/permutar
+Forecast_tools/oct_make_forecast.m,si,pendiente,,
+Forecast_tools/oct_plot_forecast_croco.m,si,pendiente,DI,orden de dimensiones sin transponer/permutar; hiperslab perdido: getVar sin start/count dentro de un bucle
+Forecast_tools/oct_write_GFS.m,si,pendiente,PT,"no parsea en Octave; sintaxis octcdf/netcdf-toolbox (nc{..}, ncdouble, sync, .FillValue_)"
+Nesting_tools/oct_change_sigma.m,no,sin NetCDF,,
+Nesting_tools/oct_connect_topo.m,no,sin NetCDF,,
+Nesting_tools/oct_connect_volume.m,no,sin NetCDF,,
+Nesting_tools/oct_create_agrif_fixedgrids_in.m,no,sin NetCDF,,
+Nesting_tools/oct_create_crocoin.m,no,sin NetCDF,,
+Nesting_tools/oct_create_nestedbulk.m,no,corregido,,"revisada/reescrita para octave-netcdf (orden Fortran, transpuestas)"
+Nesting_tools/oct_create_nestedclim.m,si,corregido,,"revisada/reescrita para octave-netcdf (orden Fortran, transpuestas)"
+Nesting_tools/oct_create_nesteddust.m,no,corregido,,"revisada/reescrita para octave-netcdf (orden Fortran, transpuestas)"
+Nesting_tools/oct_create_nestedfile.m,si,corregido,,nueva: clona estructura del archivo padre
+Nesting_tools/oct_create_nestedforcing.m,no,corregido,,"revisada/reescrita para octave-netcdf (orden Fortran, transpuestas)"
+Nesting_tools/oct_create_nestedgrid.m,si,corregido,,"revisada/reescrita para octave-netcdf (orden Fortran, transpuestas)"
+Nesting_tools/oct_create_nestedinitial.m,si,corregido,,"revisada/reescrita para octave-netcdf (orden Fortran, transpuestas)"
+Nesting_tools/oct_create_nestedndepo.m,no,corregido,,"revisada/reescrita para octave-netcdf (orden Fortran, transpuestas)"
+Nesting_tools/oct_create_nestedrestart.m,si,corregido,,"revisada/reescrita para octave-netcdf (orden Fortran, transpuestas)"
+Nesting_tools/oct_get_Lchild.m,no,sin NetCDF,,
+Nesting_tools/oct_get_Mchild.m,no,sin NetCDF,,
+Nesting_tools/oct_get_alpha.m,no,sin NetCDF,,
+Nesting_tools/oct_get_bioebusbutton.m,no,sin NetCDF,,
+Nesting_tools/oct_get_biolbutton.m,no,sin NetCDF,,
+Nesting_tools/oct_get_childgrdname.m,si,corregido,,"revisada/reescrita para octave-netcdf (orden Fortran, transpuestas)"
+Nesting_tools/oct_get_embeddedmask.m,no,sin NetCDF,,
+Nesting_tools/oct_get_findgridpos.m,si,corregido,,"revisada/reescrita para octave-netcdf (orden Fortran, transpuestas)"
+Nesting_tools/oct_get_hmax_coast.m,no,sin NetCDF,,
+Nesting_tools/oct_get_hmin.m,no,sin NetCDF,,
+Nesting_tools/oct_get_imax.m,no,sin NetCDF,,
+Nesting_tools/oct_get_imin.m,no,sin NetCDF,,
+Nesting_tools/oct_get_jmax.m,no,sin NetCDF,,
+Nesting_tools/oct_get_jmin.m,no,sin NetCDF,,
+Nesting_tools/oct_get_matchvolumebutton.m,no,sin NetCDF,,
+Nesting_tools/oct_get_n_filter_deep.m,no,sin NetCDF,,
+Nesting_tools/oct_get_n_filter_final.m,no,sin NetCDF,,
+Nesting_tools/oct_get_nband.m,no,sin NetCDF,,
+Nesting_tools/oct_get_newtopobutton.m,no,sin NetCDF,,
+Nesting_tools/oct_get_parentblkname.m,si,corregido,,"revisada/reescrita para octave-netcdf (orden Fortran, transpuestas)"
+Nesting_tools/oct_get_parentclmname.m,si,corregido,,"revisada/reescrita para octave-netcdf (orden Fortran, transpuestas)"
+Nesting_tools/oct_get_parentdustname.m,si,corregido,,"revisada/reescrita para octave-netcdf (orden Fortran, transpuestas)"
+Nesting_tools/oct_get_parentfrcname.m,si,corregido,,"revisada/reescrita para octave-netcdf (orden Fortran, transpuestas)"
+Nesting_tools/oct_get_parentgrdname.m,si,corregido,,"revisada/reescrita para octave-netcdf (orden Fortran, transpuestas)"
+Nesting_tools/oct_get_parentininame.m,si,corregido,,"revisada/reescrita para octave-netcdf (orden Fortran, transpuestas)"
+Nesting_tools/oct_get_parentrstname.m,si,corregido,,"revisada/reescrita para octave-netcdf (orden Fortran, transpuestas)"
+Nesting_tools/oct_get_piscesbutton.m,no,sin NetCDF,,
+Nesting_tools/oct_get_rcoef.m,no,sin NetCDF,,
+Nesting_tools/oct_get_rfactor.m,no,sin NetCDF,,
+Nesting_tools/oct_get_river.m,si,corregido,,"revisada/reescrita para octave-netcdf (orden Fortran, transpuestas)"
+Nesting_tools/oct_get_topofile.m,si,corregido,,"revisada/reescrita para octave-netcdf (orden Fortran, transpuestas)"
+Nesting_tools/oct_interp_bulk.m,no,sin NetCDF,,
+Nesting_tools/oct_interp_child.m,si,corregido,,"revisada/reescrita para octave-netcdf (orden Fortran, transpuestas)"
+Nesting_tools/oct_interp_clim.m,no,sin NetCDF,,
+Nesting_tools/oct_interp_dust.m,no,sin NetCDF,,
+Nesting_tools/oct_interp_forcing.m,no,sin NetCDF,,
+Nesting_tools/oct_interp_initial.m,no,sin NetCDF,,
+Nesting_tools/oct_interp_restart.m,no,sin NetCDF,,
+Nesting_tools/oct_interpvar3d.m,si,corregido,,"revisada/reescrita para octave-netcdf (orden Fortran, transpuestas)"
+Nesting_tools/oct_interpvar4d.m,si,corregido,,"revisada/reescrita para octave-netcdf (orden Fortran, transpuestas)"
+Nesting_tools/oct_nested_bulk.m,si,corregido,,"revisada/reescrita para octave-netcdf (orden Fortran, transpuestas)"
+Nesting_tools/oct_nested_clim.m,si,corregido,,"revisada/reescrita para octave-netcdf (orden Fortran, transpuestas)"
+Nesting_tools/oct_nested_dust.m,si,corregido,,"revisada/reescrita para octave-netcdf (orden Fortran, transpuestas)"
+Nesting_tools/oct_nested_file.m,si,corregido,,nueva: interpolación genérica padre->hijo
+Nesting_tools/oct_nested_forcing.m,si,corregido,,"revisada/reescrita para octave-netcdf (orden Fortran, transpuestas)"
+Nesting_tools/oct_nested_grid.m,si,corregido,,"revisada/reescrita para octave-netcdf (orden Fortran, transpuestas)"
+Nesting_tools/oct_nested_initial.m,si,corregido,,"revisada/reescrita para octave-netcdf (orden Fortran, transpuestas)"
+Nesting_tools/oct_nested_ndepo.m,si,corregido,,"revisada/reescrita para octave-netcdf (orden Fortran, transpuestas)"
+Nesting_tools/oct_nested_restart.m,si,corregido,,"revisada/reescrita para octave-netcdf (orden Fortran, transpuestas)"
+Nesting_tools/oct_nestgui.m,si,corregido,,GUI programática (sin .fig); ginput en vez de rbbox
+Nesting_tools/oct_plot_nestbulk.m,no,corregido,,"revisada/reescrita para octave-netcdf (orden Fortran, transpuestas)"
+Nesting_tools/oct_plot_nestclim.m,si,corregido,,"revisada/reescrita para octave-netcdf (orden Fortran, transpuestas)"
+Nesting_tools/oct_plot_nestdust.m,si,corregido,,"revisada/reescrita para octave-netcdf (orden Fortran, transpuestas)"
+Nesting_tools/oct_plot_nestforcing.m,si,corregido,,"revisada/reescrita para octave-netcdf (orden Fortran, transpuestas)"
+Nesting_tools/oct_plot_nestgrid.m,si,corregido,,"revisada/reescrita para octave-netcdf (orden Fortran, transpuestas)"
+Nesting_tools/oct_plot_nestndepo.m,si,corregido,,"revisada/reescrita para octave-netcdf (orden Fortran, transpuestas)"
+Nesting_tools/oct_reset_handle.m,no,sin NetCDF,,
+Nesting_tools/oct_set_parentgrid.m,si,corregido,,nueva: carga grilla madre en la GUI
+Nesting_tools/oct_update_limits.m,no,sin NetCDF,,
+Nesting_tools/oct_update_plot.m,no,sin NetCDF,,
+Nesting_tools/oct_vert_correc.m,si,corregido,,"revisada/reescrita para octave-netcdf (orden Fortran, transpuestas)"
+Nesting_tools/oct_vert_correc_onefield.m,no,corregido,,"revisada/reescrita para octave-netcdf (orden Fortran, transpuestas)"
+Nesting_tools/oct_zoomin.m,si,corregido,,"revisada/reescrita para octave-netcdf (orden Fortran, transpuestas)"
+Nesting_tools/oct_zoomout.m,si,corregido,,"revisada/reescrita para octave-netcdf (orden Fortran, transpuestas)"
+Oforc_OGCM/oct_create_OGCM.m,si,corregida (cadena principal),,
+Oforc_OGCM/oct_download_SODA.m,no,revisada (sin NetCDF),,
+Oforc_OGCM/oct_download_mercator_python.m,no,revisada (sin NetCDF),,
+Oforc_OGCM/oct_ext_data_OGCM.m,si,corregida (cadena principal),,
+Oforc_OGCM/oct_extract_SODA.m,no,revisada (sin NetCDF),,
+Oforc_OGCM/oct_get_SODA_subgrid.m,no,revisada (sin NetCDF),,
+Oforc_OGCM/oct_get_file_python_mercator.m,no,revisada (sin NetCDF),,
+Oforc_OGCM/oct_get_mercator_subgrid.m,no,sin NetCDF,,
+Oforc_OGCM/oct_interp_OGCM.m,si,corregida (cadena principal),,
+Oforc_OGCM/oct_make_OGCM_SODA.m,si,corregida (cadena principal),,
+Oforc_OGCM/oct_make_OGCM_mercator.m,si,corregida (cadena principal),,
+Oforc_OGCM/oct_prepro_soda.m,no,sin NetCDF,,
+Oforc_OGCM/oct_vinterp_OGCM_bry.m,no,revisada (sin NetCDF),,
+Oforc_OGCM/oct_write_mercator.m,si,corregida (cadena principal),,
+Oforc_OGCM/oct_write_mercator_multi.m,si,corregida (cadena principal),,
+Opendap_tools/oct_getdap.m,no,revisada (sin NetCDF),,
+Opendap_tools/oct_readattribute.m,no,revisada (sin NetCDF),,
+Opendap_tools/oct_readdap.m,no,revisada (sin NetCDF),,
+Opendap_tools_no_loaddap/oct_getdap.m,no,revisada (sin NetCDF),,
+Opendap_tools_no_loaddap/oct_loaddap.m,si,corregida (cadena principal),,
+Opendap_tools_no_loaddap/oct_readattribute.m,si,corregida (cadena principal),,
+Opendap_tools_no_loaddap/oct_readdap.m,si,corregida (cadena principal),,
+Preprocessing_tools/Bio/npzd-bioebus/oct_add_Sphyto_Lphyto.m,si,pendiente,CDIP,línea rota por el convertidor ([conv] 0-based); orden de dimensiones sin transponer/permutar; hiperslab perdido: getVar sin start/count dentro de un bucle; no parsea en Octave
+Preprocessing_tools/Bio/npzd-bioebus/oct_add_Szoo_Lzoo.m,si,pendiente,CDIP,línea rota por el convertidor ([conv] 0-based); orden de dimensiones sin transponer/permutar; hiperslab perdido: getVar sin start/count dentro de un bucle; no parsea en Octave
+Preprocessing_tools/Bio/npzd-bioebus/oct_add_bry_bioebus.m,si,pendiente,Z,putVar con escalar (escribe memoria basura)
+Preprocessing_tools/Bio/npzd-bioebus/oct_add_bry_bioebus_Z.m,si,pendiente,Z,putVar con escalar (escribe memoria basura)
+Preprocessing_tools/Bio/npzd-bioebus/oct_add_bry_npzd.m,si,pendiente,Z,putVar con escalar (escribe memoria basura)
+Preprocessing_tools/Bio/npzd-bioebus/oct_add_bry_npzd_Z.m,si,pendiente,Z,putVar con escalar (escribe memoria basura)
+Preprocessing_tools/Bio/npzd-bioebus/oct_add_chla.m,si,pendiente,CDIP,línea rota por el convertidor ([conv] 0-based); orden de dimensiones sin transponer/permutar; hiperslab perdido: getVar sin start/count dentro de un bucle; no parsea en Octave
+Preprocessing_tools/Bio/npzd-bioebus/oct_add_ini_Sphyto_Lphyto.m,si,pendiente,CDIP,línea rota por el convertidor ([conv] 0-based); orden de dimensiones sin transponer/permutar; hiperslab perdido: getVar sin start/count dentro de un bucle; no parsea en Octave
+Preprocessing_tools/Bio/npzd-bioebus/oct_add_ini_Szoo_Lzoo.m,si,pendiente,CDIP,línea rota por el convertidor ([conv] 0-based); orden de dimensiones sin transponer/permutar; hiperslab perdido: getVar sin start/count dentro de un bucle; no parsea en Octave
+Preprocessing_tools/Bio/npzd-bioebus/oct_add_ini_bioebus.m,si,pendiente,,
+Preprocessing_tools/Bio/npzd-bioebus/oct_add_ini_chla.m,si,pendiente,CDPT,"línea rota por el convertidor ([conv] 0-based); orden de dimensiones sin transponer/permutar; no parsea en Octave; sintaxis octcdf/netcdf-toolbox (nc{..}, ncdouble, sync, .FillValue_)"
+Preprocessing_tools/Bio/npzd-bioebus/oct_add_ini_no3.m,si,pendiente,CDPT,"línea rota por el convertidor ([conv] 0-based); orden de dimensiones sin transponer/permutar; no parsea en Octave; sintaxis octcdf/netcdf-toolbox (nc{..}, ncdouble, sync, .FillValue_)"
+Preprocessing_tools/Bio/npzd-bioebus/oct_add_ini_npzd.m,si,pendiente,Z,putVar con escalar (escribe memoria basura)
+Preprocessing_tools/Bio/npzd-bioebus/oct_add_ini_o2.m,si,pendiente,CDPT,"línea rota por el convertidor ([conv] 0-based); orden de dimensiones sin transponer/permutar; no parsea en Octave; sintaxis octcdf/netcdf-toolbox (nc{..}, ncdouble, sync, .FillValue_)"
+Preprocessing_tools/Bio/npzd-bioebus/oct_add_ini_phyto.m,si,pendiente,CDIP,línea rota por el convertidor ([conv] 0-based); orden de dimensiones sin transponer/permutar; hiperslab perdido: getVar sin start/count dentro de un bucle; no parsea en Octave
+Preprocessing_tools/Bio/npzd-bioebus/oct_add_ini_zoo.m,si,pendiente,CDIP,línea rota por el convertidor ([conv] 0-based); orden de dimensiones sin transponer/permutar; hiperslab perdido: getVar sin start/count dentro de un bucle; no parsea en Octave
+Preprocessing_tools/Bio/npzd-bioebus/oct_add_phyto.m,si,pendiente,CDIP,línea rota por el convertidor ([conv] 0-based); orden de dimensiones sin transponer/permutar; hiperslab perdido: getVar sin start/count dentro de un bucle; no parsea en Octave
+Preprocessing_tools/Bio/npzd-bioebus/oct_add_zoo.m,si,pendiente,CDIP,línea rota por el convertidor ([conv] 0-based); orden de dimensiones sin transponer/permutar; hiperslab perdido: getVar sin start/count dentro de un bucle; no parsea en Octave
+Preprocessing_tools/Bio/npzd-bioebus/oct_bry_interp_bgc.m,si,pendiente,CIP,línea rota por el convertidor ([conv] 0-based); hiperslab perdido: getVar sin start/count dentro de un bucle; no parsea en Octave
+Preprocessing_tools/Bio/npzd-bioebus/oct_bry_interp_bgc_chloro.m,si,pendiente,CDIP,línea rota por el convertidor ([conv] 0-based); orden de dimensiones sin transponer/permutar; hiperslab perdido: getVar sin start/count dentro de un bucle; no parsea en Octave
+Preprocessing_tools/Bio/npzd-bioebus/oct_make_bry_bioebus.m,si,pendiente,D,orden de dimensiones sin transponer/permutar
+Preprocessing_tools/Bio/npzd-bioebus/oct_make_bry_npzd.m,si,pendiente,D,orden de dimensiones sin transponer/permutar
+Preprocessing_tools/Bio/npzd-bioebus/oct_make_clim_bioebus.m,si,pendiente,CDP,línea rota por el convertidor ([conv] 0-based); orden de dimensiones sin transponer/permutar; no parsea en Octave
+Preprocessing_tools/Bio/npzd-bioebus/oct_make_clim_npzd.m,si,pendiente,CDP,línea rota por el convertidor ([conv] 0-based); orden de dimensiones sin transponer/permutar; no parsea en Octave
+Preprocessing_tools/Bio/npzd-bioebus/oct_make_ini_bioebus.m,si,pendiente,CDP,línea rota por el convertidor ([conv] 0-based); orden de dimensiones sin transponer/permutar; no parsea en Octave
+Preprocessing_tools/Bio/npzd-bioebus/oct_make_ini_npzd.m,si,pendiente,CDP,línea rota por el convertidor ([conv] 0-based); orden de dimensiones sin transponer/permutar; no parsea en Octave
+Preprocessing_tools/Bio/npzd-bioebus/oct_make_n2o_bioebus.m,si,pendiente,CDP,línea rota por el convertidor ([conv] 0-based); orden de dimensiones sin transponer/permutar; no parsea en Octave
+Preprocessing_tools/Bio/npzd-bioebus/oct_nevis_2003.m,no,sin NetCDF,,
+Preprocessing_tools/Bio/npzd-bioebus/oct_vinterp_bry_bgc.m,si,pendiente,CDIP,línea rota por el convertidor ([conv] 0-based); orden de dimensiones sin transponer/permutar; hiperslab perdido: getVar sin start/count dentro de un bucle; no parsea en Octave
+Preprocessing_tools/Bio/oct_add_bry_pisces.m,si,pendiente,Z,putVar con escalar (escribe memoria basura)
+Preprocessing_tools/Bio/oct_add_bry_pisces_Z.m,si,pendiente,Z,putVar con escalar (escribe memoria basura)
+Preprocessing_tools/Bio/oct_add_dic.m,si,pendiente,DP,orden de dimensiones sin transponer/permutar; no parsea en Octave
+Preprocessing_tools/Bio/oct_add_doc.m,si,pendiente,DP,orden de dimensiones sin transponer/permutar; no parsea en Octave
+Preprocessing_tools/Bio/oct_add_don.m,si,pendiente,DP,orden de dimensiones sin transponer/permutar; no parsea en Octave
+Preprocessing_tools/Bio/oct_add_dop.m,si,pendiente,DP,orden de dimensiones sin transponer/permutar; no parsea en Octave
+Preprocessing_tools/Bio/oct_add_fer.m,si,pendiente,D,orden de dimensiones sin transponer/permutar
+Preprocessing_tools/Bio/oct_add_ini_pisces.m,si,pendiente,Z,putVar con escalar (escribe memoria basura)
+Preprocessing_tools/Bio/oct_add_no3.m,si,pendiente,DP,orden de dimensiones sin transponer/permutar; no parsea en Octave
+Preprocessing_tools/Bio/oct_add_o2.m,si,pendiente,CDP,línea rota por el convertidor ([conv] 0-based); orden de dimensiones sin transponer/permutar; no parsea en Octave
+Preprocessing_tools/Bio/oct_add_po4.m,si,pendiente,DP,orden de dimensiones sin transponer/permutar; no parsea en Octave
+Preprocessing_tools/Bio/oct_add_sio3.m,si,pendiente,DP,orden de dimensiones sin transponer/permutar; no parsea en Octave
+Preprocessing_tools/Bio/oct_add_talk.m,si,pendiente,DP,orden de dimensiones sin transponer/permutar; no parsea en Octave
+Preprocessing_tools/Bio/oct_bry_interp_pisces.m,si,pendiente,CIP,línea rota por el convertidor ([conv] 0-based); hiperslab perdido: getVar sin start/count dentro de un bucle; no parsea en Octave
+Preprocessing_tools/Bio/oct_make_biol.m,no,sin NetCDF,,
+Preprocessing_tools/Bio/oct_make_bry_pisces.m,si,pendiente,D,orden de dimensiones sin transponer/permutar
+Preprocessing_tools/Bio/oct_make_clim_pisces.m,no,sin NetCDF,,
+Preprocessing_tools/Bio/oct_make_dust.m,si,pendiente,CDP,línea rota por el convertidor ([conv] 0-based); orden de dimensiones sin transponer/permutar; no parsea en Octave
+Preprocessing_tools/Bio/oct_make_ini_pisces.m,no,sin NetCDF,,
+Preprocessing_tools/Bio/oct_make_ndepo.m,si,pendiente,CDP,línea rota por el convertidor ([conv] 0-based); orden de dimensiones sin transponer/permutar; no parsea en Octave
+Preprocessing_tools/oct_add_swradbio_climato.m,si,pendiente,D,orden de dimensiones sin transponer/permutar
+Preprocessing_tools/oct_add_topo.m,si,corregida (cadena principal),,
+Preprocessing_tools/oct_barotropic_currents.m,si,pendiente,CDIP,línea rota por el convertidor ([conv] 0-based); orden de dimensiones sin transponer/permutar; hiperslab perdido: getVar sin start/count dentro de un bucle; no parsea en Octave
+Preprocessing_tools/oct_bry_interp.m,si,corregida (cadena principal),,
+Preprocessing_tools/oct_create_bry_Z.m,si,corregida (cadena principal),,
+Preprocessing_tools/oct_create_bryfile.m,si,corregida (cadena principal),,
+Preprocessing_tools/oct_create_bryfile_wkb.m,si,pendiente,Z,putVar con escalar (escribe memoria basura)
+Preprocessing_tools/oct_create_bulk.m,si,corregida (cadena principal),,
+Preprocessing_tools/oct_create_climfile.m,si,corregida (cadena principal),,
+Preprocessing_tools/oct_create_forcing.m,si,corregida (cadena principal),,
+Preprocessing_tools/oct_create_grid.m,si,corregida (cadena principal),,
+Preprocessing_tools/oct_create_inifile.m,si,corregida (cadena principal),,
+Preprocessing_tools/oct_create_oafile.m,si,corregida (cadena principal),,
+Preprocessing_tools/oct_csf.m,no,revisada (sin NetCDF),,
+Preprocessing_tools/oct_easy.m,si,corregido,,GUI programática (sin GUIDE/.fig); topo por banda de latitud
+Preprocessing_tools/oct_easy_grid.m,no,revisada (sin NetCDF),,
+Preprocessing_tools/oct_example_write_runoff_to_nc.m,si,pendiente,,
+Preprocessing_tools/oct_ext_crocopacific.m,si,pendiente,CDIP,línea rota por el convertidor ([conv] 0-based); orden de dimensiones sin transponer/permutar; hiperslab perdido: getVar sin start/count dentro de un bucle; no parsea en Octave
+Preprocessing_tools/oct_ext_data.m,si,corregida (cadena principal),,
+Preprocessing_tools/oct_ext_data_pathfinder.m,si,pendiente,DT,"orden de dimensiones sin transponer/permutar; sintaxis octcdf/netcdf-toolbox (nc{..}, ncdouble, sync, .FillValue_)"
+Preprocessing_tools/oct_ext_tracers.m,si,corregida (cadena principal),,
+Preprocessing_tools/oct_ext_tracers2.m,si,pendiente,CDIP,línea rota por el convertidor ([conv] 0-based); orden de dimensiones sin transponer/permutar; hiperslab perdido: getVar sin start/count dentro de un bucle; no parsea en Octave
+Preprocessing_tools/oct_ext_tracers_ini.m,si,corregida (cadena principal),,
+Preprocessing_tools/oct_extr_chlo.m,no,sin NetCDF,,
+Preprocessing_tools/oct_fixcolorbar.m,no,revisada (sin NetCDF),,
+Preprocessing_tools/oct_geost_currents.m,si,corregida (cadena principal),,
+Preprocessing_tools/oct_geost_currents_bry.m,si,corregida (cadena principal),,
+Preprocessing_tools/oct_get_angle.m,no,revisada (sin NetCDF),,
+Preprocessing_tools/oct_get_dqdsst.m,no,revisada (sin NetCDF),,
+Preprocessing_tools/oct_get_metrics.m,si,corregida (cadena principal),,
+Preprocessing_tools/oct_get_missing_val.m,no,revisada (sin NetCDF),,
+Preprocessing_tools/oct_get_missing_val_2d.m,no,sin NetCDF,,
+Preprocessing_tools/oct_get_obcvolcons.m,no,revisada (sin NetCDF),,
+Preprocessing_tools/oct_get_psi.m,no,revisada (sin NetCDF),,
+Preprocessing_tools/oct_get_time_attributes.m,no,revisada (sin NetCDF),,
+Preprocessing_tools/oct_getpot.m,si,corregida (cadena principal),,
+Preprocessing_tools/oct_getpot_bry.m,si,corregida (cadena principal),,
+Preprocessing_tools/oct_hanning.m,no,revisada (sin NetCDF),,
+Preprocessing_tools/oct_int_data_occam.m,si,pendiente,CDIP,línea rota por el convertidor ([conv] 0-based); orden de dimensiones sin transponer/permutar; hiperslab perdido: getVar sin start/count dentro de un bucle; no parsea en Octave
+Preprocessing_tools/oct_leap_year.m,no,sin NetCDF,,
+Preprocessing_tools/oct_make_bry.m,si,corregida (cadena principal),,
+Preprocessing_tools/oct_make_bulk.m,si,corregida (cadena principal),,
+Preprocessing_tools/oct_make_clim.m,si,corregida (cadena principal),,
+Preprocessing_tools/oct_make_clim_crocopacific.m,si,pendiente,D,orden de dimensiones sin transponer/permutar
+Preprocessing_tools/oct_make_clim_high.m,si,pendiente,D,orden de dimensiones sin transponer/permutar
+Preprocessing_tools/oct_make_clim_occam.m,si,pendiente,D,orden de dimensiones sin transponer/permutar
+Preprocessing_tools/oct_make_clim_orca05.m,si,pendiente,CDP,línea rota por el convertidor ([conv] 0-based); orden de dimensiones sin transponer/permutar; no parsea en Octave
+Preprocessing_tools/oct_make_coast.m,si,corregido,,save -v7 (Octave guardaba texto)
+Preprocessing_tools/oct_make_coast2.m,no,sin NetCDF,,
+Preprocessing_tools/oct_make_config.m,no,sin NetCDF,,
+Preprocessing_tools/oct_make_forcing.m,si,corregida (cadena principal),,
+Preprocessing_tools/oct_make_grid.m,si,corregido,,oct_easy y oct_editmask habilitados en Octave (qt) con waitfor
+Preprocessing_tools/oct_make_grid2.m,si,pendiente,,
+Preprocessing_tools/oct_make_gshhs_link.m,no,revisada (sin NetCDF),,
+Preprocessing_tools/oct_make_ini.m,no,revisada (sin NetCDF),,
+Preprocessing_tools/oct_make_paper.m,no,sin NetCDF,,
+Preprocessing_tools/oct_nanmean.m,no,sin NetCDF,,
+Preprocessing_tools/oct_nc_add_globatt.m,si,corregida (cadena principal),,
+Preprocessing_tools/oct_nc_add_swradbio_blk.m,si,pendiente,T,"sintaxis octcdf/netcdf-toolbox (nc{..}, ncdouble, sync, .FillValue_)"
+Preprocessing_tools/oct_nc_add_swradbio_frc.m,si,pendiente,T,"sintaxis octcdf/netcdf-toolbox (nc{..}, ncdouble, sync, .FillValue_)"
+Preprocessing_tools/oct_oacoef.m,no,sin NetCDF,,
+Preprocessing_tools/oct_oainterp.m,no,revisada (sin NetCDF),,
+Preprocessing_tools/oct_pathfinder_sst.m,si,pendiente,CDIP,línea rota por el convertidor ([conv] 0-based); orden de dimensiones sin transponer/permutar; hiperslab perdido: getVar sin start/count dentro de un bucle; no parsea en Octave
+Preprocessing_tools/oct_plot_oa.m,si,pendiente,D,orden de dimensiones sin transponer/permutar
+Preprocessing_tools/oct_process_mask.m,no,revisada (sin NetCDF),,
+Preprocessing_tools/oct_rem_avg_zeta.m,si,pendiente,CDIP,línea rota por el convertidor ([conv] 0-based); orden de dimensiones sin transponer/permutar; hiperslab perdido: getVar sin start/count dentro de un bucle; no parsea en Octave
+Preprocessing_tools/oct_rempoints.m,no,revisada (sin NetCDF),,
+Preprocessing_tools/oct_rho2u_2d.m,no,revisada (sin NetCDF),,
+Preprocessing_tools/oct_rho2u_3d.m,no,revisada (sin NetCDF),,
+Preprocessing_tools/oct_rho2uvp.m,no,revisada (sin NetCDF),,
+Preprocessing_tools/oct_rho2v_2d.m,no,revisada (sin NetCDF),,
+Preprocessing_tools/oct_rho2v_3d.m,no,revisada (sin NetCDF),,
+Preprocessing_tools/oct_rho_eos.m,no,revisada (sin NetCDF),,
+Preprocessing_tools/oct_rmavgssh.m,si,corregida (cadena principal),,
+Preprocessing_tools/oct_scoordinate.m,no,revisada (sin NetCDF),,
+Preprocessing_tools/oct_smoothgrid.m,no,revisada (sin NetCDF),,
+Preprocessing_tools/oct_smoothgrid_new.m,no,revisada (sin NetCDF),,
+Preprocessing_tools/oct_spheric_dist.m,no,revisada (sin NetCDF),,
+Preprocessing_tools/oct_step_sor.m,no,revisada (sin NetCDF),,
+Preprocessing_tools/oct_test_bioforcing.m,si,pendiente,D,orden de dimensiones sin transponer/permutar
+Preprocessing_tools/oct_test_bry.m,si,corregida (cadena principal),,
+Preprocessing_tools/oct_test_clim.m,si,corregida (cadena principal),,
+Preprocessing_tools/oct_test_forcing.m,si,corregida (cadena principal),,
+Preprocessing_tools/oct_test_r.m,si,pendiente,D,orden de dimensiones sin transponer/permutar
+Preprocessing_tools/oct_test_vgrid.m,si,pendiente,D,orden de dimensiones sin transponer/permutar
+Preprocessing_tools/oct_theta.m,no,revisada (sin NetCDF),,
+Preprocessing_tools/oct_toto.m,si,pendiente,DT,"orden de dimensiones sin transponer/permutar; sintaxis octcdf/netcdf-toolbox (nc{..}, ncdouble, sync, .FillValue_)"
+Preprocessing_tools/oct_tridim.m,no,revisada (sin NetCDF),,
+Preprocessing_tools/oct_u2rho_2d.m,no,revisada (sin NetCDF),,
+Preprocessing_tools/oct_uv_vec2rho.m,no,revisada (sin NetCDF),,
+Preprocessing_tools/oct_uvp_mask.m,no,revisada (sin NetCDF),,
+Preprocessing_tools/oct_v2rho_2d.m,no,revisada (sin NetCDF),,
+Preprocessing_tools/oct_vinterp_bry.m,si,corregida (cadena principal),,
+Preprocessing_tools/oct_vinterp_clm.m,si,corregida (cadena principal),,
+Preprocessing_tools/oct_write_time_attributes.m,si,"revisada (correcta, sin cambios)",,
+Preprocessing_tools/oct_zlevs.m,no,revisada (sin NetCDF),,
+Preprocessing_tools/oct_zlevs_1d.m,no,sin NetCDF,,
+Preprocessing_tools/oct_ztosigma.m,no,revisada (sin NetCDF),,
+Preprocessing_tools/oct_ztosigma_1d.m,no,revisada (sin NetCDF),,
+RUNOFF_DAI/oct_compute_runoff_global_monthly_clim.m,si,pendiente,DT,"orden de dimensiones sin transponer/permutar; sintaxis octcdf/netcdf-toolbox (nc{..}, ncdouble, sync, .FillValue_)"
+Rivers/oct_check_domain_runoff.m,no,revisada (sin NetCDF),,
+Rivers/oct_create_runoff.m,si,corregida (ríos),,
+Rivers/oct_locate_runoff.m,no,revisada (sin NetCDF),,
+Rivers/oct_make_runoff.m,si,corregida (ríos),,
+Rivers/oct_runoff_glob_extract.m,si,corregida (ríos),,
+Rivers/oct_runoff_grid_pos.m,no,revisada (sin NetCDF),,
+Tides/T_TIDE/oct_rmse.m,no,sin NetCDF,,
+Tides/T_TIDE/oct_str2val.m,no,sin NetCDF,,
+Tides/T_TIDE/oct_t_astron.m,no,sin NetCDF,,
+Tides/T_TIDE/oct_t_demo.m,no,sin NetCDF,,
+Tides/T_TIDE/oct_t_equilib.m,no,sin NetCDF,,
+Tides/T_TIDE/oct_t_errors.m,no,sin NetCDF,,
+Tides/T_TIDE/oct_t_getconsts.m,no,sin NetCDF,,
+Tides/T_TIDE/oct_t_predic.m,no,sin NetCDF,,
+Tides/T_TIDE/oct_t_readme.m,no,sin NetCDF,,
+Tides/T_TIDE/oct_t_synth.m,no,sin NetCDF,,
+Tides/T_TIDE/oct_t_tide.m,no,sin NetCDF,,
+Tides/T_TIDE/oct_t_tidecb.m,no,sin NetCDF,,
+Tides/T_TIDE/oct_t_vuf.m,no,sin NetCDF,,
+Tides/T_TIDE/oct_t_xtide.m,no,sin NetCDF,,
+Tides/oct_add_tidal_data.m,si,corregida (cadena principal),,
+Tides/oct_ap2ep.m,no,revisada (sin NetCDF),,
+Tides/oct_clm_tides.m,si,corregida (cadena principal),,
+Tides/oct_compare_croco_tpxo.m,si,pendiente,DT,"orden de dimensiones sin transponer/permutar; sintaxis octcdf/netcdf-toolbox (nc{..}, ncdouble, sync, .FillValue_)"
+Tides/oct_create_forcing_tideonly.m,si,pendiente,,
+Tides/oct_egbert_correc.m,no,revisada (sin NetCDF),,
+Tides/oct_ellipse.m,no,revisada (sin NetCDF),,
+Tides/oct_ext_data_sal.m,si,corregida (cadena principal),,
+Tides/oct_ext_data_tpxo.m,no,revisada (sin NetCDF),,
+Tides/oct_m_ellipse.m,no,revisada (sin NetCDF),,
+Tides/oct_make_GOT99.m,si,pendiente,CDIP,línea rota por el convertidor ([conv] 0-based); orden de dimensiones sin transponer/permutar; hiperslab perdido: getVar sin start/count dentro de un bucle; no parsea en Octave
+Tides/oct_make_TPXO.m,si,pendiente,,
+Tides/oct_make_tides.m,si,corregida (cadena principal),,
+Tides/oct_make_tides_interannual.m,si,pendiente,D,orden de dimensiones sin transponer/permutar
+Tides/oct_mjd.m,no,revisada (sin NetCDF),,
+Tides/oct_mjd2greg.m,no,revisada (sin NetCDF),,
+Tides/oct_nc_add_tides.m,si,corregida (cadena principal),,
+Tides/oct_plot_tide.m,si,corregida (cadena principal),,
+Tides/oct_read_data_tpxo.m,si,corregida (cadena principal),,
+Tides/oct_valid_tides.m,si,pendiente,DPT,"orden de dimensiones sin transponer/permutar; no parsea en Octave; sintaxis octcdf/netcdf-toolbox (nc{..}, ncdouble, sync, .FillValue_)"
+UTILITIES/mask/oct_editmask.m,si,corregido,,nueva: editor de máscara con callbacks function-handle (sin rbbox/eval)
+UTILITIES/mask/oct_read_mask.m,si,corregido,,"máscara double, spherical robusto"
+UTILITIES/mask/oct_write_mask.m,si,corregido,,"reescrita: sin función anidada, dims (xi,eta)"
+Visualization_tools/oct_add_arrow.m,no,sin NetCDF,,
+Visualization_tools/oct_add_speed_vec.m,si,corregido,,"revisada para octave-netcdf (orden Fortran, hyperslab por registro); ver notas oct_croco_gui"
+Visualization_tools/oct_add_towns.m,no,corregido,,"revisada para octave-netcdf (orden Fortran, hyperslab por registro); ver notas oct_croco_gui"
+Visualization_tools/oct_animation.m,si,corregido,,"revisada para octave-netcdf (orden Fortran, hyperslab por registro); ver notas oct_croco_gui"
+Visualization_tools/oct_bounddomain.m,no,sin NetCDF,,
+Visualization_tools/oct_bvf_eos.m,no,sin NetCDF,,
+Visualization_tools/oct_croco_gui.m,si,corregido,,"GUI programática (sin .fig), callbacks function-handle"
+Visualization_tools/oct_do_plot.m,no,sin NetCDF,,
+Visualization_tools/oct_draw_topo.m,si,corregido,,"revisada para octave-netcdf (orden Fortran, hyperslab por registro); ver notas oct_croco_gui"
+Visualization_tools/oct_ertel.m,si,corregido,,"revisada para octave-netcdf (orden Fortran, hyperslab por registro); ver notas oct_croco_gui"
+Visualization_tools/oct_fli_begin.m,no,sin NetCDF,,
+Visualization_tools/oct_fli_end.m,no,sin NetCDF,,
+Visualization_tools/oct_get_Lorbacher_MLD.m,si,corregido,,"revisada para octave-netcdf (orden Fortran, hyperslab por registro); ver notas oct_croco_gui"
+Visualization_tools/oct_get_bvf.m,si,corregido,,"revisada para octave-netcdf (orden Fortran, hyperslab por registro); ver notas oct_croco_gui"
+Visualization_tools/oct_get_chla.m,no,sin NetCDF,,
+Visualization_tools/oct_get_date.m,si,pendiente,D,orden de dimensiones sin transponer/permutar
+Visualization_tools/oct_get_depth_maxvar.m,no,sin NetCDF,,
+Visualization_tools/oct_get_depth_var.m,no,sin NetCDF,,
+Visualization_tools/oct_get_depths.m,si,corregido,,"revisada para octave-netcdf (orden Fortran, hyperslab por registro); ver notas oct_croco_gui"
+Visualization_tools/oct_get_hslice.m,si,corregido,,"revisada para octave-netcdf (orden Fortran, hyperslab por registro); ver notas oct_croco_gui"
+Visualization_tools/oct_get_ke.m,no,sin NetCDF,,
+Visualization_tools/oct_get_mld.m,no,sin NetCDF,,
+Visualization_tools/oct_get_mouse.m,no,corregido,,"revisada para octave-netcdf (orden Fortran, hyperslab por registro); ver notas oct_croco_gui"
+Visualization_tools/oct_get_mouse_1.m,no,corregido,,"revisada para octave-netcdf (orden Fortran, hyperslab por registro); ver notas oct_croco_gui"
+Visualization_tools/oct_get_okubo.m,si,corregido,,"revisada para octave-netcdf (orden Fortran, hyperslab por registro); ver notas oct_croco_gui"
+Visualization_tools/oct_get_pot.m,no,sin NetCDF,,
+Visualization_tools/oct_get_pv.m,si,corregido,,"revisada para octave-netcdf (orden Fortran, hyperslab por registro); ver notas oct_croco_gui"
+Visualization_tools/oct_get_rfac.m,si,corregido,,"revisada para octave-netcdf (orden Fortran, hyperslab por registro); ver notas oct_croco_gui"
+Visualization_tools/oct_get_rho.m,no,sin NetCDF,,
+Visualization_tools/oct_get_section.m,si,corregido,,"revisada para octave-netcdf (orden Fortran, hyperslab por registro); ver notas oct_croco_gui"
+Visualization_tools/oct_get_speed.m,no,sin NetCDF,,
+Visualization_tools/oct_get_streamfunc.m,si,corregido,,"revisada para octave-netcdf (orden Fortran, hyperslab por registro); ver notas oct_croco_gui"
+Visualization_tools/oct_get_transfunc.m,si,corregido,,"revisada para octave-netcdf (orden Fortran, hyperslab por registro); ver notas oct_croco_gui"
+Visualization_tools/oct_get_type.m,si,corregido,,"revisada para octave-netcdf (orden Fortran, hyperslab por registro); ver notas oct_croco_gui"
+Visualization_tools/oct_get_var.m,si,corregido,,"revisada para octave-netcdf (orden Fortran, hyperslab por registro); ver notas oct_croco_gui"
+Visualization_tools/oct_get_vort.m,si,corregido,,"revisada para octave-netcdf (orden Fortran, hyperslab por registro); ver notas oct_croco_gui"
+Visualization_tools/oct_get_xt.m,si,corregido,,"revisada para octave-netcdf (orden Fortran, hyperslab por registro); ver notas oct_croco_gui"
+Visualization_tools/oct_get_z_15C.m,si,corregido,,"revisada para octave-netcdf (orden Fortran, hyperslab por registro); ver notas oct_croco_gui"
+Visualization_tools/oct_get_z_20C.m,si,corregido,,"revisada para octave-netcdf (orden Fortran, hyperslab por registro); ver notas oct_croco_gui"
+Visualization_tools/oct_get_z_SST1.m,si,corregido,,"revisada para octave-netcdf (orden Fortran, hyperslab por registro); ver notas oct_croco_gui"
+Visualization_tools/oct_get_z_max_bvf.m,si,corregido,,"revisada para octave-netcdf (orden Fortran, hyperslab por registro); ver notas oct_croco_gui"
+Visualization_tools/oct_get_z_max_dtdz.m,si,corregido,,"revisada para octave-netcdf (orden Fortran, hyperslab por registro); ver notas oct_croco_gui"
+Visualization_tools/oct_get_z_rho125.m,si,corregido,,"revisada para octave-netcdf (orden Fortran, hyperslab por registro); ver notas oct_croco_gui"
+Visualization_tools/oct_get_z_sig26.m,si,corregido,,"revisada para octave-netcdf (orden Fortran, hyperslab por registro); ver notas oct_croco_gui"
+Visualization_tools/oct_get_z_sig27.m,si,corregido,,"revisada para octave-netcdf (orden Fortran, hyperslab por registro); ver notas oct_croco_gui"
+Visualization_tools/oct_getframe_fli.m,no,sin NetCDF,,
+Visualization_tools/oct_horizslice.m,no,corregido,,"revisada para octave-netcdf (orden Fortran, hyperslab por registro); ver notas oct_croco_gui"
+Visualization_tools/oct_hovmuller.m,no,corregido,,"revisada para octave-netcdf (orden Fortran, hyperslab por registro); ver notas oct_croco_gui"
+Visualization_tools/oct_m_contourf.m,no,corregido,,"revisada para octave-netcdf (orden Fortran, hyperslab por registro); ver notas oct_croco_gui"
+Visualization_tools/oct_m_quiver_cst.m,no,sin NetCDF,,
+Visualization_tools/oct_oacoef.m,no,sin NetCDF,,
+Visualization_tools/oct_okubo_croco.m,no,sin NetCDF,,
+Visualization_tools/oct_ppm2fli.m,no,sin NetCDF,,
+Visualization_tools/oct_psi2rho.m,no,sin NetCDF,,
+Visualization_tools/oct_read_latlonmask.m,si,corregida (ríos),,
+Visualization_tools/oct_readlat.m,si,corregido,,"revisada para octave-netcdf (orden Fortran, hyperslab por registro); ver notas oct_croco_gui"
+Visualization_tools/oct_readlon.m,si,corregido,,"revisada para octave-netcdf (orden Fortran, hyperslab por registro); ver notas oct_croco_gui"
+Visualization_tools/oct_rho_pot.m,no,sin NetCDF,,
+Visualization_tools/oct_savefig.m,no,corregido,,nueva: diálogo de guardado (extensión sigue al formato)
+Visualization_tools/oct_seawifscolorbar.m,no,sin NetCDF,,
+Visualization_tools/oct_subplot_tight.m,no,sin NetCDF,,
+Visualization_tools/oct_time_series.m,si,corregido,,"revisada para octave-netcdf (orden Fortran, hyperslab por registro); ver notas oct_croco_gui"
+Visualization_tools/oct_vert_grad.m,no,sin NetCDF,,
+Visualization_tools/oct_vert_profile.m,si,corregido,,"revisada para octave-netcdf (orden Fortran, hyperslab por registro); ver notas oct_croco_gui"
+Visualization_tools/oct_vertslice.m,no,corregido,,"revisada para octave-netcdf (orden Fortran, hyperslab por registro); ver notas oct_croco_gui"
+Visualization_tools/oct_vinterp.m,no,corregido,,"revisada para octave-netcdf (orden Fortran, hyperslab por registro); ver notas oct_croco_gui"
+Visualization_tools/oct_vorticity.m,no,sin NetCDF,,
+oct_start.m,no,revisada (sin NetCDF),,

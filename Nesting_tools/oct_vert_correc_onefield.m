@@ -1,0 +1,46 @@
+function oct_vert_correc_onefield(ncfile,tindex,field)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% Vertically reinterpolate embedded 3D variables
+% when the topography (and so the sigma grid) has
+% been changed
+%
+%
+%     oct_vert_correc(ncfile,tindex,field)
+%
+%     ncfile : input clim file
+%
+%     tindex: time inde processed
+%
+%     field: variable ('r') processed. String
+%
+%  Further Information:  
+%  http://www.croco-ocean.org
+%  
+%  This file is part of CROCOTOOLS
+%
+%  CROCOTOOLS is free software; you can redistribute it and/or modify
+%  it under the terms of the GNU General Public License as published
+%  by the Free Software Foundation; either version 2 of the License,
+%  or (at your option) any later version.
+%
+%  CROCOTOOLS is distributed in the hope that it will be useful, but
+%  WITHOUT ANY WARRANTY; without even the implied warranty of
+%  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+%  GNU General Public License for more details.
+%
+%  You should have received a copy of the GNU General Public License
+%  along with this program; if not, write to the Free Software
+%  Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+%  MA  02111-1307  USA
+%
+%  Copyright (c) 2004-2006 by Pierrick Penven 
+%  e-mail:Pierrick.Penven@ird.fr  
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  Octave version (Sep-2026): vertical correction of one field, done by
+%  oct_vert_correc restricted to the variable 'field'.
+%
+oct_vert_correc(ncfile,tindex,0,0,{''},{''},field)
+return

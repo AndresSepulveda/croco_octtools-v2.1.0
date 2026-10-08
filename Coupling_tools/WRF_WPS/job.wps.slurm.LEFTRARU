@@ -1,0 +1,17 @@
+#!/bin/bash
+#SBATCH --job-name=Run_wps
+#SBATCH --partition=slims
+#SBATCH --ntasks=1
+#SBATCH --time=12:00:00              # temps d execution maximum demande (HH:MM:SS)
+#SBATCH --output=run_wps.out
+#SBATCH --error=run_wps.err
+
+cd ${SLURM_SUBMIT_DIR}
+
+#===============================================================================
+
+umask 022
+set -u
+
+./run_wps.bash configure.namelist.wps 1
+
