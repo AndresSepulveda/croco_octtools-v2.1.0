@@ -20,7 +20,7 @@ modificaciones posteriores.
 
 ```matlab
 oct_start              % agrega Roms2Roms_tools al path
-oct_make_h             % (opcional) topografía de la hija
+oct_make_h             % topografía de la hija
 oct_r2r_ini            % archivo inicial
 oct_make_r2r           % archivo de fronteras
 ```
