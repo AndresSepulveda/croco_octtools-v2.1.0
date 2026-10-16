@@ -12,13 +12,13 @@
 
 
 % ROMS parent and child grid directories
-pdir = '/home/marcela/croco/BENGUELA_L0/CROCO_FILES/';
-cdir = '/home/marcela/croco/BENGUELA_L1/CROCO_FILES/';
+pdir = '/home/livecroco/Desktop/Run/CROCO_FILES/';
+cdir = '/home/livecroco/Desktop/Run/CROCO_FILES/';
 pgrid = 'croco_grd.nc';
-cgrid = 'croco_grd.nc';
+cgrid = 'croco_grd.nc.1';
 
 % When matching boundary topo: Only match to parent topography on open boundaries
-obcflag = [1 0 1 1];      % open boundaries flag (1=open , [S E N W])
+obcflag = [1 1 1 1];      % open boundaries flag (1=open , [S E N W])
 
 rmax = 0.25;
 hmin = 75;
