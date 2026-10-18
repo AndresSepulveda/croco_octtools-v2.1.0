@@ -18,10 +18,18 @@ function varargout = oct_croco_gui(varargin)
 %  Menus: History file, Grid file, Coastline file, Town names file,
 %         View bathymetry.
 %  Mouse selections (Vertical section, Hovmuller, Time series, Vertical
-%  profile) use ginput on the map: click the 2 ends of the section or
-%  the point of the profile/time series.
+%  profile, T-S diagram) use ginput on the map: click the 2 ends of the
+%  section or the point of the profile/time series.
+%  T-S diagram: temperature-salinity profiles at one point or in a
+%  region (2 clicks: corners of the box), lines coloured by depth,
+%  sigma-theta contours and the main water masses of Emery and Meincke
+%  (1986) (oct_ts_diagram).
 %  Animation: the frames are saved as PNG files in <var>_z<level>_frames/
 %  and assembled in an animated GIF (and an MP4 if ffmpeg is installed).
+%  Flow animation (button at the top): particles with fading trails
+%  advected by the currents over a colour overlay (e.g. SST) on a dark
+%  orthographic globe, in the style of earth.nullschool.net
+%  (oct_flow_anim: options window, MP4 + GIF).
 %
 %  Further Information:
 %  http://www.croco-ocean.org
@@ -33,10 +41,21 @@ function varargout = oct_croco_gui(varargin)
 %  by the Free Software Foundation; either version 2 of the License,
 %  or (at your option) any later version.
 %
+%  CROCOTOOLS is distributed in the hope that it will be useful, but
+%  WITHOUT ANY WARRANTY; without even the implied warranty of
+%  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+%  GNU General Public License for more details.
+%
+%  You should have received a copy of the GNU General Public License
+%  along with this program; if not, write to the Free Software
+%  Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+%  MA  02111-1307  USA
+%
 %  Copyright (c) 2002-2006 by Pierrick Penven
 %  e-mail:Pierrick.Penven@ird.fr
 %
 %  Updated 02-Nov-2006 by Pierrick Penven (Yorig)
+%  Andres Sepulveda 2026 - Octave adaptations
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 isfile_arg = (nargin>=1) && ischar(varargin{1}) && ...
@@ -163,14 +182,15 @@ ctl={...
   'print','pushbutton','Print',[0.5186 0.0498 0.1002 0.0379],'print_Callback';...
   'listdvar','listbox',{'          ','*Ke','*Rho','*Rho_pot','*Bvf','*Vort','*Pot_vort','*Psi','*Speed','*Transport','*Okubo','*Chla','*z_SST-1C','*z_rho-1.25','*z_max_bvf','*z_max_dTdZ','*z_20C','*z_15C','*z_sig27','*z_sig26','*Lorbacher_MLD','*rfactor',''},[0.0012 0.2986 0.1101 0.3104],'listdvar_Callback';...
   'null','text','Derived variables',[-0.0012 0.609 0.12 0.0201],'';...
-  'vsection','pushbutton','Vertical section',[0.0322 0.0972 0.12 0.032],'vsection_Callback';...
-  'hovmull','pushbutton','Hovmuller',[0.0322 0.0664 0.12 0.032],'hovmull_Callback';...
+  'vsection','pushbutton','Vertical section',[0.0322 0.1095 0.12 0.025],'vsection_Callback';...
+  'hovmull','pushbutton','Hovmuller',[0.0322 0.0833 0.12 0.025],'hovmull_Callback';...
   'pushbutton30','pushbutton','gray cont.',[0.2852 0.0395 0.0804 0.032],'graycontour_Callback';...
   'editcoef','edit','1',[0.9183 0.1872 0.0606 0.032],'editcoef_Callback';...
   'text29','text',{'Coefficient','(cff * var)'},[0.8998 0.1457 0.1002 0.0427],'';...
   'remcoast','pushbutton','Remove coast',[0.1349 0.9645 0.1101 0.0332],'remcoast_Callback';...
   'remtowns','pushbutton','Remove towns',[0.245 0.9645 0.1101 0.0332],'remtowns_Callback';...
-  'edittitle','edit','Title',[0.3824 0.9645 0.2512 0.0332],'edittitle_Callback';...
+  'edittitle','edit','Title',[0.3824 0.9645 0.1700 0.0332],'edittitle_Callback';...
+  'flowanim','pushbutton','Flow animation',[0.5550 0.9645 0.1150 0.0332],'flowanim_Callback';...
   'zoom_in','pushbutton','Zoom in',[0.9134 0.5237 0.0804 0.032],'zoom_in_Callback';...
   'zoom_out','pushbutton','Zoom out',[0.9134 0.4964 0.0804 0.032],'zoom_out_Callback';...
   'animation','pushbutton','Animation',[0.4084 0.0059 0.1101 0.0332],'animation_Callback';...
@@ -181,8 +201,9 @@ ctl={...
   'text31','text',{'Number of','child models : '},[0.8469 0.2579 0.1002 0.0355],'';...
   'plotbutton','pushbutton','PLOT',[0.4183 0.0865 0.1002 0.0379],'plotbutton_Callback';...
   'holdplot','pushbutton','Hold plot',[0.5186 0.0865 0.1002 0.0379],'holdplot_Callback';...
-  'tseries','pushbutton','Time series',[0.0322 0.0344 0.12 0.032],'tseries_Callback';...
-  'vprofile','pushbutton','Vertical profile',[0.0322 0.0047 0.12 0.032],'vprofile_Callback';...
+  'tseries','pushbutton','Time series',[0.0322 0.0571 0.12 0.025],'tseries_Callback';...
+  'vprofile','pushbutton','Vertical profile',[0.0322 0.0309 0.12 0.025],'vprofile_Callback';...
+  'tsdiag','pushbutton','T-S diagram',[0.0322 0.0047 0.12 0.025],'tsdiag_Callback';...
   'text32','text','Year origin (nan=climato): ',[0.6733 0.9716 0.1906 0.0201],'';...
   'edit_Yorig','edit','NaN',[0.8639 0.9656 0.0804 0.032],'edit_Yorig_Callback';...
   };
@@ -1444,6 +1465,8 @@ switch kind
     base=sprintf('tseries_%s_z%g',vn,handles.vlevel);
   case 'vprofile'
     base=sprintf('vprofile_%s_t%d',vn,handles.tindex);
+  case 'tsdiagram'
+    base=sprintf('tsdiagram_t%d',handles.tindex);
   otherwise
     base=vn;
 end
@@ -1492,6 +1515,13 @@ function varargout = animation_Callback(h, eventdata, handles, varargin_id)
 oct_animation(handles)
 
 return
+% ------------------------------------------------------------
+%    Flow animation (particles advected by the currents over a colour
+%    overlay, orthographic globe: earth.nullschool style)
+% ------------------------------------------------------------
+function varargout = flowanim_Callback(h, eventdata, handles, varargin_id)
+oct_flow_anim(handles)
+return
 function varargout = editskipanim_Callback(h, eventdata, handles, varargin_id)
 handles.skipanim=floor(abs(str2num(get(handles.editskipanim,'String'))));
 set(handles.editskipanim,'String',num2str(handles.skipanim))
@@ -1510,7 +1540,7 @@ function varargout = vsection_Callback(h, eventdata, handles, varargin_id)
 [lon1,lat1,lon2,lat2]=oct_get_mouse(handles);
 sepfig(handles,'vsection')
 oct_vertslice(handles.hisfile,handles.gridfile,[lon1 lon2],[lat1 lat2],...
-          handles.vname,handles.tindex,handles.coef,[],[],...
+          handles.vname,handles.tindex,handles.coef,handles.colmin,handles.colmax,...
 	  handles.ncol,[],[],[],[],handles.pltstyle,[],[],...
 	  handles.Yorig)
 return
@@ -1522,7 +1552,7 @@ function varargout = hovmull_Callback(h, eventdata, handles, varargin_id)
 sepfig(handles,'hovmuller')
 oct_hovmuller(handles.hisfile,handles.gridfile,[lon1 lon2],[lat1 lat2],...
           handles.vname,[1:handles.T],handles.vlevel,handles.coef,...
-          [],[],handles.ncol,[],[],[],[],handles.pltstyle)
+          handles.colmin,handles.colmax,handles.ncol,[],[],[],[],handles.pltstyle)
 return
 % ------------------------------------------------------------
 %    Time series
@@ -1542,6 +1572,35 @@ sepfig(handles,'vprofile')
 oct_vert_profile(handles.hisfile,handles.gridfile,lon0,lat0,...
              handles.vname,handles.tindex,handles.coef,...
 	     handles.Yorig)
+return
+% ------------------------------------------------------------
+%    T-S diagram of the temperature and salinity profiles at a point
+%    or in a region (2 clicks: corners), coloured by depth, with the
+%    water masses of Emery and Meincke (1986)
+% ------------------------------------------------------------
+function varargout = tsdiag_Callback(h, eventdata, handles, varargin_id)
+if isempty(handles.hisfile)
+  errordlg('Open a history/average file first','T-S diagram','modal'); return
+end
+ncid=netcdf.open(handles.hisfile,'NC_NOWRITE');
+ok=true;
+try, netcdf.inqVarID(ncid,'temp'); netcdf.inqVarID(ncid,'salt'); catch, ok=false; end
+netcdf.close(ncid);
+if ~ok
+  errordlg('temp and salt are needed for the T-S diagram','T-S diagram','modal'); return
+end
+c=questdlg('T-S diagram of the profiles at:','T-S diagram','One point','A region (2 clicks)','Cancel','One point');
+if isempty(c) || strcmp(c,'Cancel'), return, end
+if strcmp(c,'One point')
+  disp('T-S diagram: click on the point')
+  [lon0,lat0]=oct_get_mouse_1(handles); lonb=lon0; latb=lat0;
+else
+  disp('T-S diagram: click on two corners of the region')
+  [lon1,lat1,lon2,lat2]=oct_get_mouse(handles); lonb=[lon1 lon2]; latb=[lat1 lat2];
+end
+sepfig(handles,'tsdiagram')
+set(1,'Position',[60 60 1050 640]);
+oct_ts_diagram(handles.hisfile,handles.gridfile,lonb,latb,handles.tindex,'auto',handles.Yorig);
 return
 % ------------------------------------------------------------
 %    View bathymetry
