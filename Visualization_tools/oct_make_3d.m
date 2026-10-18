@@ -51,6 +51,13 @@
 %                          the position box (J index / Latitude, I index /
 %                          Longitude); with latitude/longitude the fields
 %                          are interpolated at that latitude/longitude;
+%                          optional velocity vectors in the plane of
+%                          the section: u+w (W-E) or v+w (S-N) (along the
+%                          grid line u or v; at a constant latitude /
+%                          longitude the eastward / northward velocity),
+%                          drawn in the coordinates of the view, so that
+%                          they follow the flow with the vertical
+%                          exaggeration; "w x" multiplies w;
 %     Isosurface         : surface where the variable is equal to a
 %                          value (on regular z levels), transparency;
 %     Wind vectors (output file) / Wind vectors from BLK/FRC file...:
@@ -584,6 +591,7 @@ if ~isempty(S.f3) && ishghandle(S.f3)
   for k=1:numel(layers), layers(k).hg=[]; end
   if ~isempty(layers) && ~isfield(layers,'src'), [layers.src]=deal([]); end
   if ~isempty(layers) && ~isfield(layers,'pmode'), [layers.pmode]=deal(0); end
+  if ~isempty(layers) && ~isfield(layers,'wfac'), [layers.wfac]=deal(1); end
   vr=[]; if strcmp(T0.hisfile,S.hisfile) && isfield(T0,'vr'), vr=T0.vr; end
   setappdata(S.f3,'stop',1);
   delete(S.f3);
@@ -615,9 +623,10 @@ if ~isempty(S.topo), T.topo=S.topo(T.ii,T.jj); end
 T.coslat=cos(mean(T.lat(:))*pi/180);
 T.gridfile=S.gridfile; T.hisfile=S.hisfile;
 T.layers=struct('type',{},'var',{},'pos',{},'cmin',{},'cmax',{},'cmap',{},...
-                'alpha',{},'visible',{},'vec',{},'vskip',{},'vscale',{},'hg',{},'src',{},'pmode',{});
+                'alpha',{},'visible',{},'vec',{},'vskip',{},'vscale',{},'hg',{},'src',{},'pmode',{},'wfac',{});
 T.vr=struct('var',{},'cmin',{},'cmax',{},'cmap',{});   % colour range and map per variable
 T.zrange=[NaN NaN];
+T.exagval=NaN;
 T.zl=[];
 T.sel=0;
 T.cache=struct('key',{},'val',{});
@@ -784,6 +793,12 @@ T.halpha=uicontrol(f3,'Style','edit','Units','normalized','Position',[x0+.11 y .
 y=y-.05;
 T.hvec=uicontrol(f3,'Style','checkbox','Units','normalized','Position',[x0 y w .035],...
           'String','Velocity vectors (u,v)','BackgroundColor',bg,'Callback',@cb_prop);
+T.hwfaclab=uicontrol(f3,'Style','text','Units','normalized','Position',[x0+.13 y .025 .035],...
+          'String','w x','HorizontalAlignment','left','BackgroundColor',bg,'Visible','off');
+T.hwfac=uicontrol(f3,'Style','edit','Units','normalized','Position',[x0+.155 y .035 .037],...
+          'String','1','Callback',@cb_prop,'Visible','off',...
+          'TooltipString',['Factor applied to w in the vectors of the vertical sections (1: true ',...
+                           'direction in the view, with its vertical exaggeration)']);
 T.hwmode=uicontrol(f3,'Style','popupmenu','Units','normalized','Position',[x0 y w .037],...
           'String',{'Magnitude: colour + length','Magnitude: colour only','Magnitude: length (black)',...
           'Magnitude: length (white)'},'Value',1,'Callback',@cb_prop,'Visible','off',...
@@ -963,16 +978,33 @@ end
 T.zrange=v;
 set(T.hzmin,'String',ifelse(isfinite(v(1)),num2str(v(1)),''));
 set(T.hzmax,'String',ifelse(isfinite(v(2)),num2str(v(2)),''));
+e0=T.exagval;
 T=apply_zlim(T);
+T=redraw_secvec(T,e0);
 guidata(f3,T); update_title(f3);
 set_status3(f3,sprintf('z axis: %g to %g m',T.zl));
 return
 %
 function set_exag(f3)
 T=guidata(f3);
+e0=ifelse(isfield(T,'exagval'),T.exagval,NaN);
 T=apply_aspect(T);
+T=redraw_secvec(T,e0);
 guidata(f3,T);
 update_title(f3);
+return
+%
+function T=redraw_secvec(T,e0)
+%
+% Vectors of the vertical sections follow the vertical exaggeration:
+% redrawn when it changed
+%
+if ~isfield(T,'exagval') || ~isfinite(T.exagval) || (isfinite(e0) && abs(e0-T.exagval)<=1e-9*T.exagval), return, end
+for k=1:numel(T.layers)
+  if T.layers(k).vec && any(strcmp(T.layers(k).type,{'vj','vi'}))
+    T=render_layer(T,k);
+  end
+end
 return
 %
 function cb_exag(src,~)
@@ -1199,7 +1231,7 @@ f3=ancestor(src,'figure'); T=guidata(f3);
 var='';
 if ~isempty(T.vars), var=ifelse(any(strcmp(T.vars,'temp')),'temp',T.vars{1}); end
 L=struct('type',type,'var',var,'pos',0,'cmin',NaN,'cmax',NaN,'cmap',1,...
-         'alpha',1,'visible',1,'vec',0,'vskip',max(1,round(numel(T.ii)/20)),'vscale',1,'hg',[],'src',[],'pmode',0);
+         'alpha',1,'visible',1,'vec',0,'vskip',max(1,round(numel(T.ii)/20)),'vscale',1,'hg',[],'src',[],'pmode',0,'wfac',1);
 if any(strcmp(type,{'w','wfile'}))
   if strcmp(type,'w')
     S=T.hiswind;
@@ -1279,7 +1311,7 @@ if strcmp(L.type,'w')
   hold(ax,'off');
   if ~L.visible, set(L.hg,'Visible','off'); end
   T.layers(k)=L;
-  T=apply_zlim(T);
+  e0=T.exagval; T=apply_zlim(T); T=redraw_secvec(T,e0);
   return
 end
 if T.nt==0, T.layers(k)=L; return, end
@@ -1333,6 +1365,11 @@ switch L.type
     z(m==0,:)=NaN;
     L.hg=surface(repmat(x,1,n),repmat(y,1,n),z,val2rgb(v,cm,cr),'Parent',ax,...
                  'EdgeColor','none','FaceColor','interp','FaceAlpha',L.alpha,'FaceLighting','none');
+    if L.vec && any(strcmp(T.vars,'u')) && any(strcmp(T.vars,'v'))
+      if L.pmode, c=[]; end
+      [hv,T]=section_vectors(T,ax,L,Z,c);
+      L.hg=[L.hg(:); hv(:)]';
+    end
   case 'iso'
     L.hg=draw_iso(T,ax,Z,V,L.pos,cm,cr,L.alpha);
 end
@@ -1341,7 +1378,7 @@ if ~L.visible
   set(L.hg,'Visible','off');
 end
 T.layers(k)=L;
-T=apply_zlim(T);
+e0=T.exagval; T=apply_zlim(T); T=redraw_secvec(T,e0);
 return
 %
 function [T,L]=sync_range(T,L,C)
@@ -1391,6 +1428,100 @@ if oct_cmocean('-isname',name)
 else
   cm=feval(name,n);
 end
+return
+%
+function [hv,T]=section_vectors(T,ax,L,Z,c)
+%
+% Velocity vectors in the plane of a vertical section: along-section
+% velocity + w. W-E section: u (grid xi component; at a constant
+% latitude: eastward velocity) + w; S-N section: v (eta component; at a
+% constant longitude: northward velocity) + w. The arrows are drawn in
+% the coordinates of the view (horizontal displacement in lon/lat, w
+% displacement in m), so that they follow the flow with the vertical
+% exaggeration of the view; w is multiplied by L.wfac. Scale 1: the
+% largest vector, as displayed (vertical exaggeration included) = 0.8
+% SKIP cells (arrows do not touch). One arrow every SKIP points along the
+% section, on 10 levels evenly spread between the bottom and the surface
+% (velocities interpolated in z). Redrawn when the vertical exaggeration
+% changes.
+%
+hv=[];
+[u,T]=get_var(T,'u'); [v,T]=get_var(T,'v');
+if any(strcmp(T.vars,'w'))
+  [w,T]=get_var(T,'w');
+elseif any(strcmp(T.vars,'omega'))
+  [w,T]=get_var(T,'omega');
+else
+  w=zeros(size(u));
+end
+iswe=strcmp(L.type,'vj');
+if L.pmode                                    % constant lat/lon: east/north
+  a=repmat(T.angle,[1 1 size(u,3)]);
+  if iswe, uh=u.*cos(a)-v.*sin(a); else, uh=u.*sin(a)+v.*cos(a); end
+  [x,y,z,uh]=geo_section(T,Z,uh,L.type,L.pos);
+  [~,~,~,ws]=geo_section(T,Z,w,L.type,L.pos);
+elseif iswe                                   % grid line: u (xi direction)
+  x=T.lon(:,c); y=T.lat(:,c); z=squeeze(Z(:,c,:)); uh=squeeze(u(:,c,:)); ws=squeeze(w(:,c,:));
+else                                          % grid line: v (eta direction)
+  x=T.lon(c,:)'; y=T.lat(c,:)'; z=squeeze(Z(c,:,:)); uh=squeeze(v(c,:,:)); ws=squeeze(w(c,:,:));
+end
+n=numel(x);
+if n<2, return, end
+R=6367442.76; d2r=pi/180;
+dxm=gradient(x(:)).*R*d2r.*cos(y(:)*d2r); dym=gradient(y(:))*R*d2r;   % tangent (m)
+ds=hypot(dxm,dym); ds(ds==0)=NaN;
+tx=dxm./ds; ty=dym./ds;
+dsm=median(ds(isfinite(ds)));
+if L.pmode                                    % exact east / north directions
+  if iswe, tx(:)=1; ty(:)=0; else, tx(:)=0; ty(:)=1; end
+end
+sk=max(1,round(L.vskip));
+N=size(z,2);
+ii=(1:sk:n)';
+nz=min(N,10);                                 % arrows on nz levels evenly spread
+fz=((1:nz)-0.5)/nz;                           % between the bottom and the surface
+nk=nz; U=NaN(numel(ii),nz); W=U; ZZ=U;
+for q=1:numel(ii)
+  zc=z(ii(q),:); uc=uh(ii(q),:); wc=ws(ii(q),:);
+  g=isfinite(zc) & isfinite(uc) & isfinite(wc);
+  if sum(g)<2, continue, end
+  zt=min(zc(g))+fz*(max(zc(g))-min(zc(g)));
+  ZZ(q,:)=zt;
+  U(q,:)=interp1(zc(g),uc(g),zt);
+  W(q,:)=L.wfac*interp1(zc(g),wc(g),zt);
+end
+E=1; if isfield(T,'exagval') && T.exagval>0, E=T.exagval; end
+sp=sqrt(U.^2+(E*W).^2); smax=max(sp(isfinite(sp)));   % displayed lengths
+if isempty(smax) || ~(smax>0), return, end
+dt=0.8*L.vscale*sk*dsm/smax;                  % s: largest arrow = 0.8 SKIP cells
+dX=dt*U; dZ=dt*W;                             % m
+X=repmat(x(ii),1,nk); Y=repmat(y(ii),1,nk);
+TX=repmat(tx(ii),1,nk); TY=repmat(ty(ii),1,nk);
+dlon=dX.*TX./(R*d2r*cos(Y*d2r)); dlat=dX.*TY/(R*d2r);
+ok=isfinite(X) & isfinite(ZZ) & isfinite(dlon) & isfinite(dlat) & isfinite(dZ);
+if ~any(ok(:)), return, end
+off=0.004*max(max(T.lon(:))-min(T.lon(:)),max(T.lat(:))-min(T.lat(:)));
+%
+% Arrows as lines (shaft + head) built in the plane of the section with
+% the displayed proportions (vertical x E), so that the heads are not
+% distorted by the different units of the horizontal and vertical axes
+%
+a=dX(ok); b=E*dZ(ok);                          % displayed components (m)
+la=hypot(a,b); ca=a./max(la,eps); sa=b./max(la,eps);
+hl=0.3*la; th=25*pi/180;
+s1=a-hl.*(ca*cos(th)-sa*sin(th)); v1=b-hl.*(sa*cos(th)+ca*sin(th));   % head barbs
+s2=a-hl.*(ca*cos(th)+sa*sin(th)); v2=b-hl.*(sa*cos(th)-ca*sin(th));
+m2lon=TX(ok)./(R*d2r*cos(Y(ok)*d2r)); m2lat=TY(ok)/(R*d2r);           % m along -> deg
+x0=X(ok); y0=Y(ok); z0=ZZ(ok); q=numel(x0); nn=NaN(q,1);
+S=[zeros(q,1) a nn s1 a s2 nn]; Vd=[zeros(q,1) b nn v1 b v2 nn];      % (shaft) NaN (head)
+XL=x0+S.*m2lon; YL=y0+S.*m2lat; ZL=z0+Vd/E;
+XL=XL'; YL=YL'; ZL=ZL';
+for sgn=[1 -1]                                 % both sides of the section
+  oxs=sgn*(-TY(ok)'*off); oys=sgn*(TX(ok)'*off);
+  xs=XL+oxs; ys=YL+oys;
+  hv(end+1)=line('XData',xs(:)','YData',ys(:)','ZData',ZL(:)','Parent',ax,'Color','k','LineWidth',1);
+end
+setappdata(hv(1),'arrows',[x0 y0 z0 dlon(ok) dlat(ok) dZ(ok)]);   % origins and displacements
 return
 %
 function [x,y,z,v,h,m]=geo_section(T,Z,V,type,val)
@@ -1481,7 +1612,7 @@ set(T.hlist,'String',names);
 h=[T.hvis T.hremove T.hvar T.hpos T.hposmode T.hcmin T.hcmax T.hauto T.hcmap T.halpha T.hvec T.hvskip T.hvscale];
 set(T.hvscale,'TooltipString','1: the largest vector = SKIP cells');
 if T.sel<1 || T.sel>n
-  set(T.hwmode,'Visible','off'); set(T.hvec,'Visible','on');
+  set(T.hwmode,'Visible','off'); set(T.hvec,'Visible','on'); set([T.hwfaclab T.hwfac],'Visible','off');
   set(T.hposmode,'Visible','off'); set(T.hposlab,'Visible','on');
   set(T.hlist,'Value',max(1,min(n,1)));
   set(h,'Enable','off');
@@ -1541,14 +1672,25 @@ set(T.hcmap,'Value',L.cmap);
 set(T.halpha,'String',num2str(L.alpha));
 set(T.hvec,'Value',L.vec); set(T.hvskip,'String',num2str(L.vskip)); set(T.hvscale,'String',num2str(L.vscale));
 set(T.hvec,'Visible',ifelse(strcmp(L.type,'w'),'off','on'));
+isv=any(strcmp(L.type,{'vj','vi'}));
+pv=get(T.hvec,'Position'); pv(3)=ifelse(isv,.13,.19); set(T.hvec,'Position',pv);
+set([T.hwfaclab T.hwfac],'Visible',ifelse(isv,'on','off'));
+set(T.hwfac,'String',num2str(L.wfac),'Enable','on');
+switch L.type
+  case 'vj', set(T.hvec,'String','Vectors (u,w)','TooltipString','Velocity vectors u+w in the plane of the W-E section');
+  case 'vi', set(T.hvec,'String','Vectors (v,w)','TooltipString','Velocity vectors v+w in the plane of the S-N section');
+  otherwise, set(T.hvec,'String','Velocity vectors (u,v)','TooltipString','Horizontal velocity vectors');
+end
 set(T.hwmode,'Visible',ifelse(strcmp(L.type,'w'),'on','off'));
 if strcmp(L.type,'w')
   set(T.hwmode,'Value',wind_mode(L));
   set(T.hvscale,'TooltipString','Arrow length in grid cells per unit of the variable (m/s or N/m2)');
   if wind_mode(L)==2, set(T.hvscale,'Enable','off'); end
   if wind_mode(L)>=3, set([T.hcmin T.hcmax T.hauto T.hcmap],'Enable','off'); end
-elseif ~strcmp(L.type,'h') || ~any(strcmp(T.vars,'u'))
-  set([T.hvec T.hvskip T.hvscale],'Enable','off');
+elseif ~any(strcmp(L.type,{'h','vj','vi'})) || ~any(strcmp(T.vars,'u')) || ~any(strcmp(T.vars,'v'))
+  set([T.hvec T.hvskip T.hvscale T.hwfac],'Enable','off');
+elseif ~L.vec
+  set(T.hwfac,'Enable','off');
 end
 draw_cbar(f3);
 return
@@ -1659,6 +1801,7 @@ L.alpha=min(max(num(T.halpha,L.alpha),0),1);
 L.vec=get(T.hvec,'Value');
 L.vskip=max(1,round(num(T.hvskip,L.vskip)));
 L.vscale=num(T.hvscale,L.vscale);
+L.wfac=num(T.hwfac,L.wfac);
 T.layers(T.sel)=L;
 set_status3(f3,'Computing the layer...'); drawnow;
 T=render_layer(T,T.sel);
@@ -1702,7 +1845,7 @@ for h=T.layers(T.sel).hg(:)'
 end
 T.layers(T.sel)=[];
 T.sel=min(T.sel,numel(T.layers));
-T=apply_zlim(T);
+e0=T.exagval; T=apply_zlim(T); T=redraw_secvec(T,e0);
 guidata(f3,T); update_panel(f3); update_title(f3);
 return
 %
