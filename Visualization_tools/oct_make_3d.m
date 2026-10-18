@@ -39,19 +39,55 @@
 %   contours (checkbox, depths editable, default 0 50 100 200 500 m;
 %   0 m = limit of the land mask).
 %   Menu "Add":
-%     Horizontal section : variable at a constant depth (m, negative
-%                          down; 0 = surface level), optional velocity
+%     Horizontal section : variable at a constant depth z (m, z <= 0:
+%                          negative down, 0 = surface level; positive
+%                          values are rejected), optional velocity
 %                          vectors (u,v at the same depth, rotated to
 %                          east/north with the grid angle);
 %     Vertical section W-E (constant J), Vertical section S-N (constant
 %                          I): variable along a grid line, from the
-%                          bottom to the free surface;
+%                          bottom to the free surface. The section is
+%                          defined by the grid index (J or I, 0-based) or
+%                          by a latitude (W-E) / longitude (S-N): menu
+%                          left of the position box; the fields are then
+%                          interpolated at that latitude/longitude;
 %     Isosurface         : surface where the variable is equal to a
-%                          value (on regular z levels), transparency.
+%                          value (on regular z levels), transparency;
+%     Wind vectors (output file) / Wind vectors from BLK/FRC file...:
+%                          wind (u10/v10, uwnd/vwnd, Uwind/Vwind) or
+%                          wind stress (taux/tauy, sustr/svstr) vectors
+%                          drawn on a horizontal plane ABOVE the sea
+%                          surface (height in m, editable), coloured by
+%                          the magnitude, rotated to east/north with the
+%                          grid angle. From the his/avg file: record of
+%                          the current time; from a BLK/FRC file: record
+%                          nearest to the model time (cycle_length of the
+%                          forcing time taken into account). The pair of
+%                          variables is chosen in the "Variable" menu.
+%                          Magnitude shown by colour + length, colour
+%                          only (equal arrows) or length only (black or
+%                          white arrows, reference arrow with its value);
+%                          Scale = arrow length in grid cells per unit
+%                          (m/s or N/m2), Skip = one arrow every SKIP cells.
+%   Z range (m): minimum and maximum of the vertical axis (empty: auto,
+%   from the deepest point to above the land / the wind planes); the
+%   automatic vertical exaggeration follows this range.
 %   Layers panel (right): list of the layers; for the selected layer:
 %   variable (3D variables of the file and "speed"), position (depth,
-%   J or I index, iso value), colour range (min/max, Auto), colormap,
-%   transparency, visibility, velocity vectors (skip, scale), Remove.
+%   J or I index / latitude or longitude, iso value), colour range
+%   (min/max, Auto), colormap, transparency, visibility, velocity vectors
+%   (skip, scale), Remove.
+%   Colours: the colour range and the colormap belong to the VARIABLE:
+%   all the layers of a variable (e.g. temp on horizontal and vertical
+%   sections and isosurfaces) use the same range and colormap; editing
+%   them in one layer changes all of them. Default range: whole 3D field
+%   of the variable in the domain at the first time drawn (symmetric
+%   around 0 for velocities, zeta, vorticity...), kept fixed in time;
+%   "Auto" recomputes it at the current time. Default colormaps: cmocean
+%   (oct_cmocean, oct_cmocean_var): temp thermal, salt haline, rho
+%   dense, u/v/w/zeta balance, speed and wind speed, O2 oxy, CHLA
+%   algae, nutrients matter...; other Octave colormaps (viridis, jet...)
+%   remain available in the menu.
 %   The colour bar shows the selected layer.
 %   Time: "<" / ">" or the time index box (all the layers are updated).
 %   Animation: "Animate" plays the time steps "from"-"to" (button "Stop"
@@ -63,7 +99,30 @@
 %   Arrays are kept in the (xi,eta,s) order of netcdf.getVar
 %   (octave-netcdf), no transposition. Needs the qt graphics toolkit.
 %
-%  Octave version (Oct-2026). This file is part of CROCOTOOLS (GNU GPL).
+%  Octave version (Oct-2026).
+%
+%  Further Information:
+%  http://www.croco-ocean.org
+%
+%  This file is part of CROCOTOOLS
+%
+%  CROCOTOOLS is free software; you can redistribute it and/or modify
+%  it under the terms of the GNU General Public License as published
+%  by the Free Software Foundation; either version 2 of the License,
+%  or (at your option) any later version.
+%
+%  CROCOTOOLS is distributed in the hope that it will be useful, but
+%  WITHOUT ANY WARRANTY; without even the implied warranty of
+%  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+%  GNU General Public License for more details.
+%
+%  You should have received a copy of the GNU General Public License
+%  along with this program; if not, write to the Free Software
+%  Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+%  MA  02111-1307  USA
+%
+%  Copyright (c) 2026 by Andres Sepulveda
+%  Andres Sepulveda 2026 - Octave adaptations
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function fig_out=oct_make_3d(gridfile,hisfile,topofile)
@@ -518,16 +577,20 @@ return
 function cb_make3d(src,~)
 fig=ancestor(src,'figure'); S=guidata(fig);
 set_status(fig,'Building the 3D view...'); drawnow;
-layers=[];
+layers=[]; vr=[];
 if ~isempty(S.f3) && ishghandle(S.f3)
   T0=guidata(S.f3);
   if strcmp(T0.hisfile,S.hisfile), layers=T0.layers; end
   for k=1:numel(layers), layers(k).hg=[]; end
+  if ~isempty(layers) && ~isfield(layers,'src'), [layers.src]=deal([]); end
+  if ~isempty(layers) && ~isfield(layers,'pmode'), [layers.pmode]=deal(0); end
+  vr=[]; if strcmp(T0.hisfile,S.hisfile) && isfield(T0,'vr'), vr=T0.vr; end
   setappdata(S.f3,'stop',1);
   delete(S.f3);
 end
 T=make_state(S);
 if ~isempty(layers), T.layers=layers; end
+if ~isempty(vr), T.vr=vr; end
 T.contours=get(S.hcont,'Value'); T.clevels=get(S.hclev,'String');
 f3=create_3d_window(T,fig);
 S.f3=f3; guidata(fig,S);
@@ -552,15 +615,22 @@ if ~isempty(S.topo), T.topo=S.topo(T.ii,T.jj); end
 T.coslat=cos(mean(T.lat(:))*pi/180);
 T.gridfile=S.gridfile; T.hisfile=S.hisfile;
 T.layers=struct('type',{},'var',{},'pos',{},'cmin',{},'cmax',{},'cmap',{},...
-                'alpha',{},'visible',{},'vec',{},'vskip',{},'vscale',{},'hg',{});
+                'alpha',{},'visible',{},'vec',{},'vskip',{},'vscale',{},'hg',{},'src',{},'pmode',{});
+T.vr=struct('var',{},'cmin',{},'cmax',{},'cmap',{});   % colour range and map per variable
+T.zrange=[NaN NaN];
+T.zl=[];
 T.sel=0;
 T.cache=struct('key',{},'val',{});
 T.vars={}; T.vinfo=struct('name',{},'grid',{},'w',{},'fill',{},'scale',{},'offset',{});
 T.nt=0; T.time=[]; T.tindex=1; T.N=0;
-T.cmaps={'jet','parula','viridis','turbo','hot','cool','gray','bone','cubehelix'};
-T.cmaps=T.cmaps(cellfun(@(c) exist(c)>0,T.cmaps));
+om={'viridis','parula','turbo','jet','hot','cool','bone','cubehelix'};
+om=om(cellfun(@(c) exist(c)>0,om));
+T.cmaps=[oct_cmocean(),om];                  % cmocean maps first (default)
+T.cmaplab=[strcat('cmo.',oct_cmocean()),om];
+T.hiswind=[];
 if ~isempty(T.hisfile) && exist(T.hisfile,'file')
   T=read_his_info(T);
+  T.hiswind=wind_source(T.hisfile,1);
 end
 return
 %
@@ -650,6 +720,9 @@ uimenu(ha,'Label','Horizontal section (depth)','Callback',{@cb_add,'h'},'Enable'
 uimenu(ha,'Label','Vertical section W-E (constant J)','Callback',{@cb_add,'vj'},'Enable',en);
 uimenu(ha,'Label','Vertical section S-N (constant I)','Callback',{@cb_add,'vi'},'Enable',en);
 uimenu(ha,'Label','Isosurface','Callback',{@cb_add,'iso'},'Enable',en);
+uimenu(ha,'Label','Wind vectors (output file)','Callback',{@cb_add,'w'},'Separator','on',...
+       'Enable',ifelse(~isempty(T.hiswind),'on','off'));
+uimenu(ha,'Label','Wind vectors from BLK/FRC file...','Callback',{@cb_add,'wfile'});
 hv=uimenu(f3,'Label','View');
 uimenu(hv,'Label','Reset view','Callback',@cb_resetview);
 uimenu(hv,'Label','View from above','Callback',@(s,e) view(guidata(f3).ax,0,90));
@@ -681,6 +754,9 @@ T.hvar=uicontrol(f3,'Style','popupmenu','Units','normalized','Position',[x0+.07 
 y=y-.045;
 T.hposlab=uicontrol(f3,'Style','text','Units','normalized','Position',[x0 y .1 .035],'String','Position',...
           'HorizontalAlignment','left','BackgroundColor',bg);
+T.hposmode=uicontrol(f3,'Style','popupmenu','Units','normalized','Position',[x0 y .1 .037],...
+          'String',{'J index','Latitude'},'Value',1,'Callback',@cb_prop,'Visible','off',...
+          'TooltipString','Section defined by a grid index or by a longitude/latitude');
 T.hpos=uicontrol(f3,'Style','edit','Units','normalized','Position',[x0+.1 y .09 .037],...
           'String','','Callback',@cb_prop);
 y=y-.035;
@@ -695,9 +771,11 @@ T.hcmax=uicontrol(f3,'Style','edit','Units','normalized','Position',[x0+.13 y .0
           'String','','Callback',@cb_prop,'TooltipString','Maximum of the colour range');
 y=y-.045;
 T.hauto=uicontrol(f3,'Style','pushbutton','Units','normalized','Position',[x0 y .07 .037],...
-          'String','Auto','Callback',@cb_auto,'TooltipString','Range of the layer at this time');
+          'String','Auto','Callback',@cb_auto,...
+          'TooltipString','Range of the whole 3D field of the variable at this time (all its layers)');
 T.hcmap=uicontrol(f3,'Style','popupmenu','Units','normalized','Position',[x0+.07 y .12 .037],...
-          'String',T.cmaps,'Callback',@cb_prop);
+          'String',T.cmaplab,'Callback',@cb_prop,...
+          'TooltipString','Colormap of the variable (cmo.: cmocean), shared by all its layers');
 y=y-.045;
 uicontrol(f3,'Style','text','Units','normalized','Position',[x0 y .11 .035],'String','Opacity (0-1)',...
           'HorizontalAlignment','left','BackgroundColor',bg);
@@ -706,6 +784,10 @@ T.halpha=uicontrol(f3,'Style','edit','Units','normalized','Position',[x0+.11 y .
 y=y-.05;
 T.hvec=uicontrol(f3,'Style','checkbox','Units','normalized','Position',[x0 y w .035],...
           'String','Velocity vectors (u,v)','BackgroundColor',bg,'Callback',@cb_prop);
+T.hwmode=uicontrol(f3,'Style','popupmenu','Units','normalized','Position',[x0 y w .037],...
+          'String',{'Magnitude: colour + length','Magnitude: colour only','Magnitude: length (black)',...
+          'Magnitude: length (white)'},'Value',1,'Callback',@cb_prop,'Visible','off',...
+          'TooltipString','How the wind magnitude is shown');
 y=y-.042;
 uicontrol(f3,'Style','text','Units','normalized','Position',[x0 y .04 .035],'String','Skip',...
           'HorizontalAlignment','left','BackgroundColor',bg);
@@ -730,6 +812,13 @@ T.hclev=uicontrol(f3,'Style','edit','Units','normalized','Position',[x0 y w .037
           'String',T.clevels,'Callback',@cb_contours,...
           'TooltipString','Depths of the contours (m), separated by spaces or commas');
 T.hcontour=[];
+y=y-.055;
+uicontrol(f3,'Style','text','Units','normalized','Position',[x0 y .07 .035],'String','Z range (m)',...
+          'HorizontalAlignment','left','BackgroundColor',bg);
+T.hzmin=uicontrol(f3,'Style','edit','Units','normalized','Position',[x0+.07 y .06 .037],...
+          'String','','Callback',@cb_zrange,'TooltipString','Bottom of the z axis (m, e.g. -500); empty: auto');
+T.hzmax=uicontrol(f3,'Style','edit','Units','normalized','Position',[x0+.13 y .06 .037],...
+          'String','','Callback',@cb_zrange,'TooltipString','Top of the z axis (m); empty: auto');
 %
 % Time and animation (bottom)
 %
@@ -828,15 +917,34 @@ T.hbathy=surface(T.lon,T.lat,Z,rgb,'Parent',ax,'EdgeColor','none','FaceColor','i
 try
   set(T.hbathy,'FaceLighting','gouraud','AmbientStrength',0.5,'DiffuseStrength',0.7,'SpecularStrength',0.05);
 end
-zlim(ax,[-hl ztop]);
 T.ztop=ztop; T.ztopo=ifelse(isempty(topo),0,ztop);
+T=apply_zlim(T);
 return
 %
-function set_exag(f3)
-T=guidata(f3);
+function T=apply_zlim(T)
+%
+% Limits of the z axis: Z range of the panel, or automatic (deepest point
+% to above the land and the wind planes); then the vertical aspect
+%
+zl=[-max(T.h(:)) T.ztop];
+for k=1:numel(T.layers)
+  if strcmp(T.layers(k).type,'w') && T.layers(k).visible
+    zl(2)=max(zl(2),1.15*T.layers(k).pos);
+  end
+end
+if isfinite(T.zrange(1)), zl(1)=T.zrange(1); end
+if isfinite(T.zrange(2)), zl(2)=T.zrange(2); end
+if zl(2)<=zl(1), zl=[-max(T.h(:)) T.ztop]; end
+zlim(T.ax,zl);
+T.zl=zl;
+T=apply_aspect(T);
+return
+%
+function T=apply_aspect(T)
+if ~isfield(T,'hexag') || isempty(T.zl), return, end
 v=get(T.hexag,'String'); v=v{get(T.hexag,'Value')};
 xyr=max((max(T.lon(:))-min(T.lon(:)))*T.coslat,max(T.lat(:))-min(T.lat(:)));
-zr=max(T.h(:))+T.ztopo;
+zr=diff(T.zl);
 if strcmp(v,'auto')
   dz=zr/(0.35*xyr);
 else
@@ -844,6 +952,25 @@ else
 end
 set(T.ax,'DataAspectRatio',[1/T.coslat 1 dz]);
 T.exagval=111e3/dz;
+return
+%
+function cb_zrange(src,~)
+f3=ancestor(src,'figure'); T=guidata(f3);
+v=[str2double(get(T.hzmin,'String')) str2double(get(T.hzmax,'String'))];
+if all(isfinite(v)) && v(2)<=v(1)
+  set_status3(f3,'Z range: the maximum must be larger than the minimum'); return
+end
+T.zrange=v;
+set(T.hzmin,'String',ifelse(isfinite(v(1)),num2str(v(1)),''));
+set(T.hzmax,'String',ifelse(isfinite(v(2)),num2str(v(2)),''));
+T=apply_zlim(T);
+guidata(f3,T); update_title(f3);
+set_status3(f3,sprintf('z axis: %g to %g m',T.zl));
+return
+%
+function set_exag(f3)
+T=guidata(f3);
+T=apply_aspect(T);
 guidata(f3,T);
 update_title(f3);
 return
@@ -1056,9 +1183,12 @@ return
 function s=layer_name(T,L)
 switch L.type
   case 'h',   s=sprintf('H %s z=%g m',L.var,L.pos);
-  case 'vj',  s=sprintf('V W-E %s J=%d',L.var,L.pos);
-  case 'vi',  s=sprintf('V S-N %s I=%d',L.var,L.pos);
+  case 'vj'
+    if L.pmode, s=sprintf('V W-E %s lat=%g',L.var,L.pos); else, s=sprintf('V W-E %s J=%d',L.var,L.pos); end
+  case 'vi'
+    if L.pmode, s=sprintf('V S-N %s lon=%g',L.var,L.pos); else, s=sprintf('V S-N %s I=%d',L.var,L.pos); end
   case 'iso', s=sprintf('ISO %s = %g',L.var,L.pos);
+  case 'w',   s=sprintf('WIND %s z=+%g m (%s)',L.var,L.pos,short_name(L.src.file));
 end
 if L.vec, s=[s,' +vec']; end
 if ~L.visible, s=[s,' (hidden)']; end
@@ -1066,9 +1196,36 @@ return
 %
 function cb_add(src,~,type)
 f3=ancestor(src,'figure'); T=guidata(f3);
-var=ifelse(any(strcmp(T.vars,'temp')),'temp',T.vars{1});
+var='';
+if ~isempty(T.vars), var=ifelse(any(strcmp(T.vars,'temp')),'temp',T.vars{1}); end
 L=struct('type',type,'var',var,'pos',0,'cmin',NaN,'cmax',NaN,'cmap',1,...
-         'alpha',1,'visible',1,'vec',0,'vskip',max(1,round(numel(T.ii)/20)),'vscale',1,'hg',[]);
+         'alpha',1,'visible',1,'vec',0,'vskip',max(1,round(numel(T.ii)/20)),'vscale',1,'hg',[],'src',[],'pmode',0);
+if any(strcmp(type,{'w','wfile'}))
+  if strcmp(type,'w')
+    S=T.hiswind;
+  else
+    [fn,pth]=uigetfile({'*blk*.nc;*frc*.nc','CROCO bulk/forcing files';'*.nc','All netcdf files'},...
+                       'Select the BLK or FRC file (wind or wind stress)');
+    if isequal(fn,0), return, end
+    S=wind_source(fullfile(pth,fn),0);
+  end
+  if isempty(S)
+    set_status3(f3,'No wind/stress variables (u10/v10, uwnd/vwnd, Uwind/Vwind, taux/tauy, sustr/svstr) in the file');
+    return
+  end
+  if S.nx~=T.Lp || S.ny~=T.Mp
+    set_status3(f3,sprintf('%s: grid size %dx%d differs from the model grid %dx%d',...
+                short_name(S.file),S.nx,S.ny,T.Lp,T.Mp));
+    return
+  end
+  L.type='w'; L.src=S; L.var=S.labels{1};
+  L.src.wmode=1;
+  L.pos=round_sig(max(1.3*T.ztop,0.08*max(T.h(:))),2);
+  [ue,vn]=get_wind(T,L);                         % default scale: largest
+  mag=sqrt(ue.^2+vn.^2);                         % arrow = SKIP cells
+  L.vscale=round_sig(L.vskip/max(max(mag(:)),eps),2);
+  type='w';
+end
 switch type
   case 'h'
     L.pos=0;
@@ -1086,7 +1243,7 @@ T.sel=numel(T.layers);
 set_status3(f3,'Computing the layer...'); drawnow;
 T=render_layer(T,T.sel);
 guidata(f3,T);
-update_panel(f3);
+update_panel(f3); update_title(f3);
 set_status3(f3,'');
 return
 %
@@ -1112,16 +1269,29 @@ for h=L.hg(:)'
 end
 L.hg=[];
 ax=T.ax;
+if strcmp(L.type,'w')
+  [ue,vn,L.src]=get_wind(T,L);
+  mag=sqrt(ue.^2+vn.^2);
+  [T,L]=sync_range(T,L,mag);
+  cm=get_cmap(T,L.cmap,128); cr=[L.cmin L.cmax];
+  hold(ax,'on');
+  L.hg=draw_wind(T,ax,ue,vn,L,cm,cr);
+  hold(ax,'off');
+  if ~L.visible, set(L.hg,'Visible','off'); end
+  T.layers(k)=L;
+  T=apply_zlim(T);
+  return
+end
 if T.nt==0, T.layers(k)=L; return, end
-cm=feval(T.cmaps{min(L.cmap,numel(T.cmaps))},128);
 [V,T]=get_var(T,L.var);
 [Z,T]=get_var(T,'z_r');
+[T,L]=sync_range(T,L,V);                       % range of the whole 3D field,
+cm=get_cmap(T,L.cmap,128); cr=[L.cmin L.cmax];   % shared by the layers of L.var
 hold(ax,'on');
 switch L.type
   case 'h'
-    d=L.pos; if d>0, d=-d; end
+    d=min(L.pos,0);                            % depth: <=0 (checked in cb_prop)
     C=hslice(Z,V,d);
-    [L,cr]=auto_range(L,C);
     Zs=d*ones(size(C)); Zs(~isfinite(C))=NaN;
     L.hg=surface(T.lon,T.lat,Zs,val2rgb(C,cm,cr),'Parent',ax,'EdgeColor','none',...
                  'FaceColor','interp','FaceAlpha',L.alpha,'FaceLighting','none');
@@ -1145,7 +1315,12 @@ switch L.type
       end
     end
   case {'vj','vi'}
-    if strcmp(L.type,'vj')
+    if L.pmode                                 % constant latitude/longitude
+      [x,y,z,v,h,m]=geo_section(T,Z,V,L.type,L.pos);
+      if numel(x)<2
+        hold(ax,'off'); T.layers(k)=L; return
+      end
+    elseif strcmp(L.type,'vj')
       [~,c]=min(abs(T.jj-1-L.pos)); L.pos=T.jj(c)-1;
       x=T.lon(:,c); y=T.lat(:,c); z=squeeze(Z(:,c,:)); v=squeeze(V(:,c,:)); h=T.h(:,c); m=T.mask(:,c);
     else
@@ -1156,11 +1331,9 @@ switch L.type
     v=[v(:,1) v v(:,end)];
     n=size(z,2);
     z(m==0,:)=NaN;
-    [L,cr]=auto_range(L,v);
     L.hg=surface(repmat(x,1,n),repmat(y,1,n),z,val2rgb(v,cm,cr),'Parent',ax,...
                  'EdgeColor','none','FaceColor','interp','FaceAlpha',L.alpha,'FaceLighting','none');
   case 'iso'
-    [L,cr]=auto_range(L,V);
     L.hg=draw_iso(T,ax,Z,V,L.pos,cm,cr,L.alpha);
 end
 hold(ax,'off');
@@ -1168,16 +1341,93 @@ if ~L.visible
   set(L.hg,'Visible','off');
 end
 T.layers(k)=L;
+T=apply_zlim(T);
 return
 %
-function [L,cr]=auto_range(L,C)
-if ~isfinite(L.cmin) || ~isfinite(L.cmax) || L.cmax<=L.cmin
+function [T,L]=sync_range(T,L,C)
+%
+% Colour range and colormap of the variable L.var, the same for all the
+% layers of that variable (T.vr). Not defined yet: range of C (the whole
+% 3D field of the variable in the domain at the current time, or the
+% wind magnitude), symmetric around 0 for signed variables, and the
+% default cmocean colormap of the variable (oct_cmocean_var).
+%
+k=find(strcmp({T.vr.var},L.var),1);
+if isempty(k) || ~isfinite(T.vr(k).cmin) || ~isfinite(T.vr(k).cmax)
+  [nm,div]=oct_cmocean_var(L.var);
   c=C(isfinite(C));
   if isempty(c), c=[0 1]; end
-  L.cmin=round_sig(min(c),3); L.cmax=round_sig(max(c),3);
-  if L.cmax<=L.cmin, L.cmax=L.cmin+1; end
+  if div
+    a=round_out(max(abs(c)),2,1); if a==0, a=1; end
+    r=[-a a];
+  else
+    r=[round_out(min(c),3,-1) round_out(max(c),3,1)];   % range contains the data
+    if r(2)<=r(1), r(2)=r(1)+1; end
+  end
+  if isempty(k)
+    k=numel(T.vr)+1;
+    cmap=find(strcmp(T.cmaps,nm),1); if isempty(cmap), cmap=1; end
+  else
+    cmap=T.vr(k).cmap;
+  end
+  T.vr(k)=struct('var',L.var,'cmin',r(1),'cmax',r(2),'cmap',cmap);
 end
-cr=[L.cmin L.cmax];
+L.cmin=T.vr(k).cmin; L.cmax=T.vr(k).cmax; L.cmap=T.vr(k).cmap;
+return
+%
+function v=round_out(v,n,d)
+%
+% v rounded to n significant digits, down (d<0) or up (d>0)
+%
+if v==0 || ~isfinite(v), return, end
+p=10^(n-1-floor(log10(abs(v))));
+if d<0, v=floor(v*p)/p; else, v=ceil(v*p)/p; end
+return
+%
+function cm=get_cmap(T,k,n)
+name=T.cmaps{min(max(k,1),numel(T.cmaps))};
+if oct_cmocean('-isname',name)
+  cm=oct_cmocean(name,n);
+else
+  cm=feval(name,n);
+end
+return
+%
+function [x,y,z,v,h,m]=geo_section(T,Z,V,type,val)
+%
+% Vertical section at a constant latitude (type 'vj', W-E) or longitude
+% ('vi', S-N): for each I (resp. J) the fields are interpolated linearly
+% in J (resp. I) at the given latitude (longitude). Rows that do not
+% cross the latitude (longitude) are removed.
+%
+lon=T.lon; lat=T.lat; hh=T.h; mk=T.mask;
+if strcmp(type,'vj')
+  A=lat;
+else                                      % constant longitude: swap I,J
+  A=lon'; lon=lon'; lat=lat'; hh=hh'; mk=mk';
+  Z=permute(Z,[2 1 3]); V=permute(V,[2 1 3]);
+end
+[ni,nj,N]=size(Z);
+x=NaN(ni,1); y=x; h=x; m=zeros(ni,1); z=NaN(ni,N); v=z;
+for i=1:ni
+  a=A(i,:);
+  kk=find((a(1:end-1)-val).*(a(2:end)-val)<=0 & a(1:end-1)~=a(2:end),1);
+  if isempty(kk), continue, end
+  w=(val-a(kk))/(a(kk+1)-a(kk));
+  x(i)=(1-w)*lon(i,kk)+w*lon(i,kk+1);
+  y(i)=(1-w)*lat(i,kk)+w*lat(i,kk+1);
+  h(i)=(1-w)*hh(i,kk)+w*hh(i,kk+1);
+  kn=kk+(w>=0.5);
+  m(i)=mk(i,kn);
+  z(i,:)=(1-w)*squeeze(Z(i,kk,:))+w*squeeze(Z(i,kk+1,:));
+  v1=squeeze(V(i,kk,:)); v2=squeeze(V(i,kk+1,:));
+  vi=(1-w)*v1+w*v2;
+  vn=squeeze(V(i,kn,:));
+  vi(~isfinite(vi))=vn(~isfinite(vi));      % near the coast: nearest value
+  v(i,:)=vi;
+end
+ok=isfinite(x);
+x=x(ok); y=y(ok); h=h(ok); m=m(ok); z=z(ok,:); v=v(ok,:);
 return
 %
 function hp=draw_iso(T,ax,Z,V,iso,cm,cr,alpha)
@@ -1228,8 +1478,11 @@ n=numel(T.layers);
 names=cell(1,n);
 for k=1:n, names{k}=layer_name(T,T.layers(k)); end
 set(T.hlist,'String',names);
-h=[T.hvis T.hremove T.hvar T.hpos T.hcmin T.hcmax T.hauto T.hcmap T.halpha T.hvec T.hvskip T.hvscale];
+h=[T.hvis T.hremove T.hvar T.hpos T.hposmode T.hcmin T.hcmax T.hauto T.hcmap T.halpha T.hvec T.hvskip T.hvscale];
+set(T.hvscale,'TooltipString','1: the largest vector = SKIP cells');
 if T.sel<1 || T.sel>n
+  set(T.hwmode,'Visible','off'); set(T.hvec,'Visible','on');
+  set(T.hposmode,'Visible','off'); set(T.hposlab,'Visible','on');
   set(T.hlist,'Value',max(1,min(n,1)));
   set(h,'Enable','off');
   set(T.hposlab,'String','Position'); set(T.hposinfo,'String','');
@@ -1240,29 +1493,61 @@ set(h,'Enable','on');
 L=T.layers(T.sel);
 set(T.hlist,'Value',T.sel);
 set(T.hvis,'Value',L.visible);
-set(T.hvar,'Value',find(strcmp(T.vars,L.var)));
+if strcmp(L.type,'w')
+  set(T.hvar,'String',L.src.labels,'Value',max(1,find(strcmp(L.src.labels,L.var),1)));
+else
+  set(T.hvar,'String',ifelse(isempty(T.vars),{'-'},T.vars),'Value',max(1,find(strcmp(T.vars,L.var),1)));
+end
 set(T.hpos,'String',num2str(L.pos));
+isv=any(strcmp(L.type,{'vj','vi'}));
+set(T.hposmode,'Visible',ifelse(isv,'on','off')); set(T.hposlab,'Visible',ifelse(isv,'off','on'));
+if isv
+  set(T.hposmode,'String',ifelse(strcmp(L.type,'vj'),{'J index','Latitude'},{'I index','Longitude'}),...
+      'Value',L.pmode+1);
+end
 switch L.type
   case 'h'
     set(T.hposlab,'String','Depth (m)');
-    set(T.hposinfo,'String','0: surface level, negative: depth');
+    set(T.hposinfo,'String','z (m) <= 0: 0 surface, negative below');
   case 'vj'
     set(T.hposlab,'String','J index');
-    [~,c]=min(abs(T.jj-1-L.pos));
-    set(T.hposinfo,'String',sprintf('lat %.3f (J %d..%d)',mean(T.lat(:,c)),T.jj(1)-1,T.jj(end)-1));
+    if L.pmode
+      set(T.hposinfo,'String',sprintf('domain lat %.2f..%.2f',min(T.lat(:)),max(T.lat(:))));
+    else
+      [~,c]=min(abs(T.jj-1-L.pos));
+      set(T.hposinfo,'String',sprintf('lat %.3f (J %d..%d)',mean(T.lat(:,c)),T.jj(1)-1,T.jj(end)-1));
+    end
   case 'vi'
     set(T.hposlab,'String','I index');
-    [~,c]=min(abs(T.ii-1-L.pos));
-    set(T.hposinfo,'String',sprintf('lon %.3f (I %d..%d)',mean(T.lon(c,:)),T.ii(1)-1,T.ii(end)-1));
+    if L.pmode
+      set(T.hposinfo,'String',sprintf('domain lon %.2f..%.2f',min(T.lon(:)),max(T.lon(:))));
+    else
+      [~,c]=min(abs(T.ii-1-L.pos));
+      set(T.hposinfo,'String',sprintf('lon %.3f (I %d..%d)',mean(T.lon(c,:)),T.ii(1)-1,T.ii(end)-1));
+    end
   case 'iso'
     set(T.hposlab,'String','Iso value');
     set(T.hposinfo,'String','');
+  case 'w'
+    set(T.hposlab,'String','Height (m)');
+    if wind_mode(L)==2
+      set(T.hposinfo,'String',L.src.info);
+    else
+      set(T.hposinfo,'String',sprintf('%s; %g cells per %s',L.src.info,L.vscale,wind_units(L)));
+    end
 end
 set(T.hcmin,'String',num2str(L.cmin)); set(T.hcmax,'String',num2str(L.cmax));
 set(T.hcmap,'Value',L.cmap);
 set(T.halpha,'String',num2str(L.alpha));
 set(T.hvec,'Value',L.vec); set(T.hvskip,'String',num2str(L.vskip)); set(T.hvscale,'String',num2str(L.vscale));
-if ~strcmp(L.type,'h') || ~any(strcmp(T.vars,'u'))
+set(T.hvec,'Visible',ifelse(strcmp(L.type,'w'),'off','on'));
+set(T.hwmode,'Visible',ifelse(strcmp(L.type,'w'),'on','off'));
+if strcmp(L.type,'w')
+  set(T.hwmode,'Value',wind_mode(L));
+  set(T.hvscale,'TooltipString','Arrow length in grid cells per unit of the variable (m/s or N/m2)');
+  if wind_mode(L)==2, set(T.hvscale,'Enable','off'); end
+  if wind_mode(L)>=3, set([T.hcmin T.hcmax T.hauto T.hcmap],'Enable','off'); end
+elseif ~strcmp(L.type,'h') || ~any(strcmp(T.vars,'u'))
   set([T.hvec T.hvskip T.hvscale],'Enable','off');
 end
 draw_cbar(f3);
@@ -1277,7 +1562,11 @@ if T.sel<1 || T.sel>numel(T.layers)
   guidata(f3,T); return
 end
 L=T.layers(T.sel);
-cm=feval(T.cmaps{min(L.cmap,numel(T.cmaps))},128);
+if strcmp(L.type,'w') && wind_mode(L)>=3        % magnitude shown by the length
+  set(T.cax,'Visible','off'); title(T.cax,'');
+  guidata(f3,T); return
+end
+cm=get_cmap(T,L.cmap,128);
 hold(T.cax,'on');
 T.hcbar=image([0 1],[L.cmin L.cmax],reshape(cm,[size(cm,1) 1 3]),'Parent',T.cax);
 if strcmp(L.type,'iso')
@@ -1287,7 +1576,11 @@ end
 hold(T.cax,'off');
 set(T.cax,'Visible','on','YDir','normal','XTick',[],'YAxisLocation','right','XLim',[0 1],...
           'YLim',[L.cmin L.cmax],'Box','on');
-title(T.cax,L.var,'Interpreter','none');
+if strcmp(L.type,'w')
+  title(T.cax,{L.var,L.src.units{find(strcmp(L.src.labels,L.var),1)}},'Interpreter','none');
+else
+  title(T.cax,L.var,'Interpreter','none');
+end
 guidata(f3,T);
 return
 %
@@ -1300,26 +1593,68 @@ return
 %
 function cb_prop(src,~)
 %
-% A property of the selected layer was changed: redraw the layer
+% A property of the selected layer was changed: redraw the layer. The
+% colour range and the colormap belong to the variable: a change is
+% applied to all the layers of that variable.
 %
 f3=ancestor(src,'figure'); T=guidata(f3);
 if T.sel<1, return, end
 L=T.layers(T.sel);
 num=@(h,def) ifelse(isfinite(str2double(get(h,'String'))),str2double(get(h,'String')),def);
-oldvar=L.var;
+oldvar=L.var; old=[L.cmin L.cmax L.cmap];
 L.visible=get(T.hvis,'Value');
-if ~isempty(T.vars), L.var=T.vars{get(T.hvar,'Value')}; end
-L.pos=num(T.hpos,L.pos);
-L.cmin=num(T.hcmin,L.cmin); L.cmax=num(T.hcmax,L.cmax);
+if strcmp(L.type,'w')
+  L.var=L.src.labels{min(get(T.hvar,'Value'),numel(L.src.labels))};
+  L.src.wmode=get(T.hwmode,'Value');
+elseif ~isempty(T.vars)
+  L.var=T.vars{get(T.hvar,'Value')};
+end
+msg='';
+pos=num(T.hpos,L.pos);
+switch L.type
+  case 'h'                                     % depth: z <= 0
+    if pos>0
+      msg=sprintf('Depth %g m rejected: horizontal sections need z <= 0 (e.g. -%g)',pos,pos);
+      pos=L.pos;
+    end
+  case {'vj','vi'}
+    pm=get(T.hposmode,'Value')-1;
+    if strcmp(L.type,'vj'), A=T.lat; idx=T.jj; dim=1; else, A=T.lon; idx=T.ii; dim=2; end
+    if pm~=L.pmode                             % index <-> lon/lat
+      if pm                                    % index -> lat (lon) of the line
+        [~,c]=min(abs(idx-1-L.pos));
+        if dim==1, pos=round_sig(mean(A(:,c)),5); else, pos=round_sig(mean(A(c,:)),5); end
+      else                                     % lat (lon) -> nearest index
+        if dim==1, a=mean(A,1); else, a=mean(A,2)'; end
+        [~,c]=min(abs(a-L.pos)); pos=idx(c)-1;
+      end
+      L.pmode=pm;
+    elseif pm && (pos<min(A(:)) || pos>max(A(:)))
+      msg=sprintf('%s %g outside the domain (%.3f..%.3f)',ifelse(dim==1,'Latitude','Longitude'),...
+                  pos,min(A(:)),max(A(:)));
+      pos=L.pos;
+    end
+end
+L.pos=pos;
 if ~strcmp(oldvar,L.var)
-  L.cmin=NaN; L.cmax=NaN;                       % new variable: auto range
+  L.cmin=NaN; L.cmax=NaN;                       % new variable: its own range
   if strcmp(L.type,'iso')
     T.layers(T.sel)=L;
     [V,T]=get_var(T,L.var);
     L.pos=round_sig(median(V(isfinite(V))),3);
   end
+  changed=false;
+else
+  L.cmin=num(T.hcmin,L.cmin); L.cmax=num(T.hcmax,L.cmax);
+  if L.cmax<=L.cmin, L.cmin=old(1); L.cmax=old(2); msg='The colour maximum must be larger than the minimum'; end
+  L.cmap=get(T.hcmap,'Value');
+  changed=~isequal(old,[L.cmin L.cmax L.cmap]);
+  if changed                                   % range of the variable
+    k=find(strcmp({T.vr.var},L.var),1);
+    if isempty(k), k=numel(T.vr)+1; end
+    T.vr(k)=struct('var',L.var,'cmin',L.cmin,'cmax',L.cmax,'cmap',L.cmap);
+  end
 end
-L.cmap=get(T.hcmap,'Value');
 L.alpha=min(max(num(T.halpha,L.alpha),0),1);
 L.vec=get(T.hvec,'Value');
 L.vskip=max(1,round(num(T.hvskip,L.vskip)));
@@ -1327,15 +1662,35 @@ L.vscale=num(T.hvscale,L.vscale);
 T.layers(T.sel)=L;
 set_status3(f3,'Computing the layer...'); drawnow;
 T=render_layer(T,T.sel);
-guidata(f3,T); update_panel(f3);
-set_status3(f3,'');
+if changed, T=render_var(T,L.var,T.sel); end
+guidata(f3,T); update_panel(f3); update_title(f3);
+set_status3(f3,msg);
+return
+%
+function T=render_var(T,var,skip)
+%
+% Redraw the layers of the variable VAR (except layer SKIP)
+%
+for k=1:numel(T.layers)
+  if k~=skip && strcmp(T.layers(k).var,var)
+    T=render_layer(T,k);
+  end
+end
 return
 %
 function cb_auto(src,~)
+%
+% Automatic colour range of the variable of the selected layer: range of
+% its whole 3D field at the current time (wind: magnitude), for all the
+% layers of that variable
+%
 f3=ancestor(src,'figure'); T=guidata(f3);
 if T.sel<1, return, end
-T.layers(T.sel).cmin=NaN; T.layers(T.sel).cmax=NaN;
+var=T.layers(T.sel).var;
+k=find(strcmp({T.vr.var},var),1);
+if ~isempty(k), T.vr(k).cmin=NaN; T.vr(k).cmax=NaN; end
 T=render_layer(T,T.sel);
+T=render_var(T,var,T.sel);
 guidata(f3,T); update_panel(f3);
 return
 %
@@ -1347,7 +1702,8 @@ for h=T.layers(T.sel).hg(:)'
 end
 T.layers(T.sel)=[];
 T.sel=min(T.sel,numel(T.layers));
-guidata(f3,T); update_panel(f3);
+T=apply_zlim(T);
+guidata(f3,T); update_panel(f3); update_title(f3);
 return
 %
 %---------------------------------------------------------------------
@@ -1363,6 +1719,7 @@ T.cache=T.cache([]);
 T=render_all(T);
 guidata(f3,T);
 update_time_label(f3);
+update_panel(f3);
 return
 %
 function cb_step(src,~,d)
@@ -1518,4 +1875,223 @@ if get(S.hcont,'Value') && ~isempty(lev)
   if isempty(X), X=NaN; Y=NaN; end
 end
 set(S.hcontour,'XData',X,'YData',Y);
+return
+%
+%---------------------------------------------------------------------
+% Wind / wind stress above the sea surface
+%---------------------------------------------------------------------
+%
+function S=wind_source(file,isout)
+%
+% Pairs of wind (u10/v10, uwnd/vwnd...) or wind stress (taux/tauy,
+% sustr/svstr) variables of FILE, with their grid (r/u/v), units and time
+% axis (days). isout: 1 for the his/avg file (record = model record).
+%
+S=[];
+cands={{'u10','v10'},{'U10','V10'},{'uwnd','vwnd'},{'Uwind','Vwind'},{'wind_u','wind_v'},...
+       {'taux','tauy'},{'sustr','svstr'},{'tx','ty'},{'TAUX','TAUY'}};
+nc=netcdf.open(file,'NC_NOWRITE');
+P={}; G={}; U={}; TV={}; TT={}; CY=[]; HT=[];
+nx=NaN; ny=NaN;
+for k=1:numel(cands)
+  try
+    vu=netcdf.inqVarID(nc,cands{k}{1}); vv=netcdf.inqVarID(nc,cands{k}{2});
+  catch
+    continue
+  end
+  [~,~,du]=netcdf.inqVar(nc,vu); [~,~,dv]=netcdf.inqVar(nc,vv);
+  if numel(du)<2 || numel(du)>3 || numel(dv)~=numel(du), continue, end
+  dn=@(d) netcdf.inqDim(nc,d);
+  gu=grid_letter(dn(du(1)),dn(du(2))); gv=grid_letter(dn(dv(1)),dn(dv(2)));
+  [~,n1]=netcdf.inqDim(nc,du(1)); [~,n2]=netcdf.inqDim(nc,du(2));
+  if gu=='u', n1=n1+1; end
+  if gu=='v', n2=n2+1; end
+  nx=n1; ny=n2;
+  units='';
+  try, units=netcdf.getAtt(nc,vu,'units'); end
+  tday=[]; cyc=0; ht=numel(du)==3;
+  if ht && ~isout
+    tname=dn(du(3));
+    try
+      vt=netcdf.inqVarID(nc,tname);
+      tday=double(netcdf.getVar(nc,vt)); tday=tday(:);
+      tu='days';
+      try, tu=netcdf.getAtt(nc,vt,'units'); end
+      if ~isempty(strfind(lower(tu),'sec')), tday=tday/86400; end
+      if ~isempty(strfind(lower(tu),'hour')), tday=tday/24; end
+      try, cyc=double(netcdf.getAtt(nc,vt,'cycle_length')); end
+    end
+  end
+  P{end+1}=cands{k}; G{end+1}=[gu gv]; U{end+1}=units; TT{end+1}=tday; CY(end+1)=cyc; HT(end+1)=ht;
+end
+netcdf.close(nc);
+if isempty(P), return, end
+S.file=file; S.isout=isout; S.pairs=P; S.grid=G; S.units=U; S.time=TT; S.cycle=CY; S.hastime=HT;
+S.labels=cellfun(@(p) [p{1},'/',p{2}],P,'UniformOutput',false);
+S.nx=nx; S.ny=ny; S.info='';
+return
+%
+function g=grid_letter(d1,d2)
+g='r';
+if strcmp(d1,'xi_u'), g='u'; elseif strcmp(d2,'eta_v'), g='v'; end
+return
+%
+function [ue,vn,S]=get_wind(T,L)
+%
+% East/north components of the selected pair on the rho points of the
+% block, at the record of the current time
+%
+S=L.src;
+k=find(strcmp(S.labels,L.var),1); if isempty(k), k=1; end
+rec=1; tday=NaN;
+if S.isout
+  rec=T.tindex; tday=T.time(T.tindex)/86400;
+elseif S.hastime(k) && ~isempty(S.time{k})
+  t=S.time{k};
+  if T.nt>0, tm=T.time(T.tindex)/86400; else, tm=t(1); end
+  d=abs(t-tm);
+  if S.cycle(k)>0
+    d=mod(t-tm,S.cycle(k)); d=min(d,S.cycle(k)-d);
+  end
+  [~,rec]=min(d); tday=t(rec);
+end
+u=read_2d(T,S.file,S.pairs{k}{1},S.grid{k}(1),rec,S.hastime(k));
+v=read_2d(T,S.file,S.pairs{k}{2},S.grid{k}(2),rec,S.hastime(k));
+a=T.angle;
+ue=u.*cos(a)-v.*sin(a); vn=u.*sin(a)+v.*cos(a);
+if isfinite(tday)
+  S.info=sprintf('record %d (day %.2f) of %s',rec,tday,short_name(S.file));
+else
+  S.info=sprintf('record %d of %s',rec,short_name(S.file));
+end
+return
+%
+function X=read_2d(T,file,name,g,rec,hastime)
+% 2D field (record rec) on the rho points of the block (nI,nJ)
+nc=netcdf.open(file,'NC_NOWRITE');
+vid=netcdf.inqVarID(nc,name);
+switch g
+  case 'u'
+    a=max(T.i1-1,1); b=min(T.i2,T.Lp-1); st=[a-1 T.j1-1]; ct=[b-a+1 T.j2-T.j1+1];
+  case 'v'
+    a=max(T.j1-1,1); b=min(T.j2,T.Mp-1); st=[T.i1-1 a-1]; ct=[T.i2-T.i1+1 b-a+1];
+  otherwise
+    st=[T.i1-1 T.j1-1]; ct=[T.i2-T.i1+1 T.j2-T.j1+1];
+end
+if hastime, st(end+1)=rec-1; ct(end+1)=1; end
+X=double(netcdf.getVar(nc,vid,st,ct));
+fv=[]; sc=1; of=0;
+try, fv=double(netcdf.getAtt(nc,vid,'_FillValue')); end
+try, sc=double(netcdf.getAtt(nc,vid,'scale_factor')); end
+try, of=double(netcdf.getAtt(nc,vid,'add_offset')); end
+netcdf.close(nc);
+if ~isempty(fv), X(X==fv)=NaN; end
+X=X*sc+of; X(abs(X)>1e30)=NaN;
+switch g
+  case 'u'
+    if T.i1==1, X=[X(1,:); X]; end
+    if T.i2==T.Lp, X=[X; X(end,:)]; end
+    X=0.5*(X(1:end-1,:)+X(2:end,:));
+  case 'v'
+    if T.j1==1, X=[X(:,1) X]; end
+    if T.j2==T.Mp, X=[X X(:,end)]; end
+    X=0.5*(X(:,1:end-1)+X(:,2:end));
+end
+X=X(T.ri,T.rj);
+return
+%
+function hg=draw_wind(T,ax,ue,vn,L,cm,cr)
+%
+% Arrows on the plane z=L.pos (m above the sea surface). Display mode
+% L.src.wmode:
+%   1 colour + length : coloured by the magnitude, length = scale * value
+%   2 colour only     : coloured by the magnitude, all arrows SKIP cells long
+%   3/4 length only   : black / white arrows, length = scale * value
+% scale (L.vscale) = arrow length in grid cells per unit of the variable
+% (m/s or N/m2). A reference arrow with its value is drawn in the
+% length modes. Outline of the plane in grey.
+%
+z=L.pos;
+mode=wind_mode(L);
+sk=max(1,round(L.vskip));
+ii=1:sk:size(ue,1); jj=1:sk:size(ue,2);
+x=T.lon(ii,jj); y=T.lat(ii,jj); u=ue(ii,jj); v=vn(ii,jj);
+ok=isfinite(u) & isfinite(v) & (u~=0 | v~=0);
+x=x(ok); y=y(ok); u=u(ok); v=v(ok);
+mag=sqrt(u.^2+v.^2);
+dl=cell_deg(T);
+if mode==2
+  f=0.9*sk*dl./max(mag,eps);                    % same length for all arrows
+else
+  f=L.vscale*dl;                                % degrees (lat) per unit
+end
+X=x*T.coslat;                                   % ~isotropic coordinates
+[XX,YY]=arrow_lines(X,y,f.*u,f.*v);
+hg=[];
+% plane outline (boundary of the block)
+bxo=[T.lon(:,1); T.lon(end,:)'; flipud(T.lon(:,end)); flipud(T.lon(1,:)')];
+byo=[T.lat(:,1); T.lat(end,:)'; flipud(T.lat(:,end)); flipud(T.lat(1,:)')];
+hg(end+1)=line(bxo,byo,z*ones(size(bxo)),'Parent',ax,'Color',[0.5 0.5 0.5],'LineStyle','--');
+if mode>=3                                      % one colour
+  col=ifelse(mode==3,[0 0 0],[1 1 1]);
+  hg(end+1)=line(XX(:)/T.coslat,YY(:),z*ones(numel(XX),1),'Parent',ax,'Color',col,'LineWidth',1.5);
+else                                            % colour classes
+  nb=16;
+  kb=min(max(floor((mag-cr(1))/max(cr(2)-cr(1),eps)*nb)+1,1),nb);
+  for b=1:nb
+    sel=find(kb==b);
+    if isempty(sel), continue, end
+    xs=XX(:,sel); ys=YY(:,sel);
+    c=cm(max(1,round((b-0.5)/nb*size(cm,1))),:);
+    hg(end+1)=line(xs(:)/T.coslat,ys(:),z*ones(numel(xs),1),'Parent',ax,'Color',c,'LineWidth',1.5);
+  end
+end
+if mode~=2 && ~isempty(mag)                    % reference arrow
+  ref=ref_value(max(mag));
+  x0=min(T.lon(:))+0.03*(max(T.lon(:))-min(T.lon(:)));    % SW corner of the plane
+  y0=min(T.lat(:))+0.04*(max(T.lat(:))-min(T.lat(:)));
+  [RX,RY]=arrow_lines(x0*T.coslat,y0,L.vscale*dl*ref,0);
+  col=ifelse(mode==4,[1 1 1],[0 0 0]);
+  hg(end+1)=line(RX(:)/T.coslat,RY(:),z*ones(numel(RX),1),'Parent',ax,'Color',col,'LineWidth',2);
+  hg(end+1)=text(x0+(L.vscale*dl*ref)/T.coslat*1.1,y0,z,sprintf(' %g %s',ref,wind_units(L)),...
+                 'Parent',ax,'Color',col,'FontSize',10,'FontWeight','bold','Interpreter','none');
+end
+return
+%
+function [XX,YY]=arrow_lines(X,Y,dx,dy)
+% shaft + head of the arrows (columns, NaN separated) in isotropic coordinates
+X=X(:).'; Y=Y(:).'; dx=dx(:).'; dy=dy(:).';
+len=sqrt(dx.^2+dy.^2);
+X1=X+dx; Y1=Y+dy;
+bx=-dx./max(len,eps); by=-dy./max(len,eps);
+hl=0.3*len; a=25*pi/180;
+H1x=X1+hl.*(bx*cos(a)-by*sin(a)); H1y=Y1+hl.*(bx*sin(a)+by*cos(a));
+H2x=X1+hl.*(bx*cos(a)+by*sin(a)); H2y=Y1+hl.*(-bx*sin(a)+by*cos(a));
+n=numel(X);
+XX=[X; X1; NaN(1,n); H1x; X1; H2x; NaN(1,n)];
+YY=[Y; Y1; NaN(1,n); H1y; Y1; H2y; NaN(1,n)];
+return
+%
+function dl=cell_deg(T)
+dl=median(abs(diff(T.lat(1,:))));
+if ~(dl>0), dl=median(abs(diff(T.lat(:,1)))); end
+if ~(dl>0), dl=0.1; end
+return
+%
+function r=ref_value(m)
+% round reference value (1, 2 or 5 x 10^n) not larger than m
+if ~(m>0), r=1; return, end
+p=10^floor(log10(m)); c=[1 2 5 10]*p;
+r=c(find(c<=m,1,'last'));
+return
+%
+function m=wind_mode(L)
+m=1;
+if isstruct(L.src) && isfield(L.src,'wmode'), m=L.src.wmode; end
+return
+%
+function u=wind_units(L)
+u='';
+k=find(strcmp(L.src.labels,L.var),1);
+if ~isempty(k), u=L.src.units{k}; end
 return
