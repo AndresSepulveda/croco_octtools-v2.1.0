@@ -44,13 +44,13 @@
 %                          values are rejected), optional velocity
 %                          vectors (u,v at the same depth, rotated to
 %                          east/north with the grid angle);
-%     Vertical section W-E (constant J), Vertical section S-N (constant
-%                          I): variable along a grid line, from the
-%                          bottom to the free surface. The section is
-%                          defined by the grid index (J or I, 0-based) or
-%                          by a latitude (W-E) / longitude (S-N): menu
-%                          left of the position box; the fields are then
-%                          interpolated at that latitude/longitude;
+%     Vertical section W-E, Vertical section S-N: variable from the
+%                          bottom to the free surface along a constant J
+%                          (W-E) or I (S-N) grid line, or at a constant
+%                          latitude (W-E) / longitude (S-N): menu left of
+%                          the position box (J index / Latitude, I index /
+%                          Longitude); with latitude/longitude the fields
+%                          are interpolated at that latitude/longitude;
 %     Isosurface         : surface where the variable is equal to a
 %                          value (on regular z levels), transparency;
 %     Wind vectors (output file) / Wind vectors from BLK/FRC file...:
@@ -717,8 +717,8 @@ uimenu(hf,'Label','Close','Callback',@(s,e) delete(f3),'Separator','on');
 ha=uimenu(f3,'Label','Add');
 en=ifelse(T.nt>0 && ~isempty(T.vars),'on','off');
 uimenu(ha,'Label','Horizontal section (depth)','Callback',{@cb_add,'h'},'Enable',en);
-uimenu(ha,'Label','Vertical section W-E (constant J)','Callback',{@cb_add,'vj'},'Enable',en);
-uimenu(ha,'Label','Vertical section S-N (constant I)','Callback',{@cb_add,'vi'},'Enable',en);
+uimenu(ha,'Label','Vertical section W-E','Callback',{@cb_add,'vj'},'Enable',en);
+uimenu(ha,'Label','Vertical section S-N','Callback',{@cb_add,'vi'},'Enable',en);
 uimenu(ha,'Label','Isosurface','Callback',{@cb_add,'iso'},'Enable',en);
 uimenu(ha,'Label','Wind vectors (output file)','Callback',{@cb_add,'w'},'Separator','on',...
        'Enable',ifelse(~isempty(T.hiswind),'on','off'));
