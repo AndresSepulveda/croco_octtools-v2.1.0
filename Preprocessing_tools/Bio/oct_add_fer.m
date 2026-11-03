@@ -2,11 +2,13 @@ function oct_add_fer(oafile,climfile,inifile,gridfile,seas_datafile,...
   ann_datafile,cycle,makeoa,makeclim,makeini,Yorig);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-%  function [longrd,latgrd,fer]=oct_add_fer(climfile,gridfile,...
+%  function [longrd,latgrd,fer]=add_fer(climfile,gridfile,...
 %                                       seas_datafile,ann_datafile,...
 %                                       cycle);
 %
 %  pierrick 2001
+%  Updated    Oct-2026 : Octave version (octave-netcdf, netcdf.* API)
+%  Andres Sepulveda 2026 - Octave adaptations
 %
 %  Add iron (mMol Fe m-3) in a CROCO climatology file
 %  take seasonal data for the upper levels and annual data for the
@@ -29,9 +31,11 @@ function oct_add_fer(oafile,climfile,inifile,gridfile,seas_datafile,...
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
+% options for write_time_attributes
+%
 % options for oct_write_time_attributes
 insecond = 0  ;
-add_cycle = 1 ; 
+add_cycle = 1 ;
 %
 % Initialize Yorig if not provided
 if ~exist('Yorig', 'var') ,  Yorig = []; , end
@@ -43,17 +47,19 @@ if ~exist('Yorig', 'var') ,  Yorig = []; , end
 %
 % Read in the grid
 %
-ncid = netcdf.open(gridfile, 'NC_NOWRITE');
-hmax=max(max(netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'h'))));
+ncid=netcdf.open(gridfile,'NC_NOWRITE');
+hmax=max(max(double(netcdf.getVar(ncid,netcdf.inqVarID(ncid,'h')))));
 netcdf.close(ncid);
 %
 % read in the datafiles
 %
-ncid = netcdf.open(seas_datafile, 'NC_NOWRITE');
-t=netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'T'));
+ncid=netcdf.open(seas_datafile,'NC_NOWRITE');
+t=double(netcdf.getVar(ncid,netcdf.inqVarID(ncid,'T')));
+t=t(:);
 netcdf.close(ncid);
-ncid = netcdf.open(ann_datafile, 'NC_NOWRITE');
-zfer=netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'Z'));
+ncid=netcdf.open(ann_datafile,'NC_NOWRITE');
+zfer=double(netcdf.getVar(ncid,netcdf.inqVarID(ncid,'Z')));
+zfer=zfer(:);
 kmax=max(find(zfer<hmax))-1;
 zfer=zfer(1:kmax);
 netcdf.close(ncid);
@@ -62,38 +68,35 @@ netcdf.close(ncid);
 %
 if (makeoa)
   disp('Add_fer: creating variables and attributes for the OA file')
-  ncid = netcdf.open(oafile, 'NC_WRITE');
-  %%  redef(nc);
-  did_fer_time = netcdf.defDim(ncid, 'fer_time', length(t));
-  vid_fer_time = netcdf.defVar(ncid, 'fer_time', 'NC_DOUBLE', did_fer_time);
-  did_Zfer = netcdf.defDim(ncid, 'Zfer', length(zfer));
-  vid_Zfer = netcdf.defVar(ncid, 'Zfer', 'NC_DOUBLE', did_Zfer);
-  vid_FER = netcdf.defVar(ncid, 'FER', 'NC_DOUBLE', [did_xi_rho, did_eta_rho, did_Zfer, did_fer_time]);
+  ncid=netcdf.open(oafile,'NC_WRITE');
+  netcdf.reDef(ncid);
   %
-  % [conv] línea ncchar duplicada omitida
-  netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'fer_time'), 'long_name', 'time for iron');
+  % Create dimensions and variables (netcdf.defVar: dims in reversed order)
+  %
+  did_t=netcdf.defDim(ncid,'fer_time',length(t));
+  vid_t=netcdf.defVar(ncid,'fer_time','double',did_t);
+  did_z=netcdf.defDim(ncid,'Zfer',length(zfer));
+  vid_z=netcdf.defVar(ncid,'Zfer','double',did_z);
+  did_xi=netcdf.inqDimID(ncid,'xi_rho');
+  did_eta=netcdf.inqDimID(ncid,'eta_rho');
+  vid_v=netcdf.defVar(ncid,'FER','double',[did_xi did_eta did_z did_t]);
+  %
+  % Create attributes
+  %
+  netcdf.putAtt(ncid,vid_t,'long_name','time for iron');
   oct_write_time_attributes(ncid,'fer_time',cycle,time_unit_att,time_second_unit_att,...
-    calendar_att,insecond,add_cycle);
-
+                      calendar_att,insecond,add_cycle);
+  netcdf.putAtt(ncid,vid_z,'long_name','Depth for FER');
+  netcdf.putAtt(ncid,vid_z,'units','m');
+  netcdf.putAtt(ncid,vid_v,'long_name','Iron');
+  netcdf.putAtt(ncid,vid_v,'units','uMol Fe m-3');
+  netcdf.putAtt(ncid,vid_v,'fields','FER, scalar, series');
+  netcdf.endDef(ncid);
   %
-  % [conv] línea ncchar duplicada omitida
-  netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'Zfer'), 'long_name', 'Depth for FER');
-  % [conv] línea ncchar duplicada omitida
-  netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'Zfer'), 'units', 'm');
+  % record depth and time and close
   %
-  % [conv] línea ncchar duplicada omitida
-  netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'FER'), 'long_name', 'Iron');
-  % [conv] línea ncchar duplicada omitida
-  netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'FER'), 'units', 'uMol Fe m-3');
-  % [conv] línea ncchar duplicada omitida
-  netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'FER'), 'fields', 'FER, scalar, series');
-  %
-  %%  endef(nc);
-  %
-  % record deth and time and close
-  %
-  netcdf.putVar(ncid, netcdf.inqVarID(ncid, 'fer_time'), t*30);  % if time in month in the dataset !!!
-  netcdf.putVar(ncid, netcdf.inqVarID(ncid, 'Zfer'), zfer);
+  netcdf.putVar(ncid,vid_t,0,length(t),t*30); % if time in month in the dataset !!!
+  netcdf.putVar(ncid,vid_z,0,length(zfer),zfer);
   netcdf.close(ncid);
 end
 %
@@ -104,46 +107,30 @@ if (makeclim)
   %
   % open the clim file
   %
-  ncid = netcdf.open(climfile, 'NC_WRITE');
-  %%  redef(nc);
-  did_fer_time = netcdf.defDim(ncid, 'fer_time', length(t));
-  vid_fer_time = netcdf.defVar(ncid, 'fer_time', 'NC_DOUBLE', did_fer_time);
-  vid_FER = netcdf.defVar(ncid, 'FER', 'NC_DOUBLE', [did_xi_rho, did_eta_rho, did_s_rho, did_fer_time]);
+  ncid=netcdf.open(climfile,'NC_WRITE');
+  netcdf.reDef(ncid);
+  did_t=netcdf.defDim(ncid,'fer_time',length(t));
+  vid_t=netcdf.defVar(ncid,'fer_time','double',did_t);
+  did_s=netcdf.inqDimID(ncid,'s_rho');
+  did_xi=netcdf.inqDimID(ncid,'xi_rho');
+  did_eta=netcdf.inqDimID(ncid,'eta_rho');
+  vid_v=netcdf.defVar(ncid,'FER','double',[did_xi did_eta did_s did_t]);
   %
-  % [conv] línea ncchar duplicada omitida
-  netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'fer_time'), 'long_name', 'time for iron');
+  netcdf.putAtt(ncid,vid_t,'long_name','time for iron');
   oct_write_time_attributes(ncid,'fer_time',cycle,time_unit_att,time_second_unit_att,...
                       calendar_att,insecond,add_cycle);
   %
-  % [conv] línea ncchar duplicada omitida
-  netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'FER'), 'long_name', 'Iron');
-  % [conv] línea ncchar duplicada omitida
-  netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'FER'), 'units', 'uMol Fe m-3');
-  % [conv] línea ncchar duplicada omitida
-  netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'FER'), 'fields', 'FER, scalar, series');
-  %
-  %%  endef(nc);
+  netcdf.putAtt(ncid,vid_v,'long_name','Iron');
+  netcdf.putAtt(ncid,vid_v,'units','uMol Fe m-3');
+  netcdf.putAtt(ncid,vid_v,'fields','FER, scalar, series');
+  netcdf.endDef(ncid);
   %
   % record the time and close
   %
-  netcdf.putVar(ncid, netcdf.inqVarID(ncid, 'fer_time'), t*30);  % if time in month in the dataset !!!
+  netcdf.putVar(ncid,vid_t,0,length(t),t*30); % if time in month in the dataset !!!
   netcdf.close(ncid);
 end
-% if (makeini)
-% disp('Add_fer: creating variables and attributes for the Initial file')
-% %
-% % open the clim file
-% %
-% nc=oct_netcdf(inifile,'write');
-% redef(nc);
-% nc{'FER'} = ncdouble('time','s_rho','eta_rho','xi_rho') ;
-% %
-% nc{'FER'}.long_name = ncchar('FER');
-% nc{'FER'}.long_name = 'FER';
-% nc{'FER'}.units = ncchar('uMol Fe m-3');
-% nc{'FER'}.units = 'uMol Fe m-3';
-% %
-% endef(nc);
-% close(nc)
-% end
+%
+% (the initial file part is commented out in the Matlab version)
+%
 return

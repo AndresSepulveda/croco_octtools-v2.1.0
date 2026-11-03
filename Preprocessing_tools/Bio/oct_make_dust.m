@@ -21,6 +21,8 @@
 %  Olivier Aumont the master, IRD, 2006.                          %
 %  Patricio Marchesiello, chief, IRD, 2007.                       %
 %  Christophe Eugene Raoul Menkes, the slave, IRD, 2007.          %
+%  Updated    Oct-2026 : Octave version (octave-netcdf, netcdf.* API)
+%  Andres Sepulveda 2026 - Octave adaptations
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 clear all
@@ -66,110 +68,76 @@ cycle=woa_cycle;
 %
 disp(' ')
 disp(' Read in the grid...')
-ncid = netcdf.open(grdname, 'NC_NOWRITE');
-[~,Lp]=netcdf.inqDim(ncid, netcdf.inqDimID(ncid, 'xi_rho'));
-[~,Mp]=netcdf.inqDim(ncid, netcdf.inqDimID(ncid, 'eta_rho'));
+ncid=netcdf.open(grdname,'NC_NOWRITE');
+[~,Lp]=netcdf.inqDim(ncid,netcdf.inqDimID(ncid,'xi_rho'));
+[~,Mp]=netcdf.inqDim(ncid,netcdf.inqDimID(ncid,'eta_rho'));
 L=Lp-1;
 M=Mp-1;
-lon=netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'lon_rho'));
-lat=netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'lat_rho'));
-angle=netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'angle'));
+lon=double(netcdf.getVar(ncid,netcdf.inqVarID(ncid,'lon_rho'))).';
+lat=double(netcdf.getVar(ncid,netcdf.inqVarID(ncid,'lat_rho'))).';
+angle=double(netcdf.getVar(ncid,netcdf.inqVarID(ncid,'angle'))).';
 netcdf.close(ncid);
 %
 % create dust forcing file
 %
 disp(' Creating file')
-ncid = netcdf.create(bioname, 'NC_CLOBBER');
-%nc = oct_netcdf(bioname, 'write');
-%%result = redef(nc);
+ncid = netcdf.create(bioname,'NC_CLOBBER');
 %
-did_xi_u = netcdf.defDim(ncid, 'xi_u', L);
-did_xi_v = netcdf.defDim(ncid, 'xi_v', Lp);
-did_xi_rho = netcdf.defDim(ncid, 'xi_rho', Lp);
-did_eta_u = netcdf.defDim(ncid, 'eta_u', Mp);
-did_eta_v = netcdf.defDim(ncid, 'eta_v', M);
-did_eta_rho = netcdf.defDim(ncid, 'eta_rho', Mp);
+did_xi_u    = netcdf.defDim(ncid,'xi_u',L);
+did_xi_v    = netcdf.defDim(ncid,'xi_v',Lp);
+did_xi_rho  = netcdf.defDim(ncid,'xi_rho',Lp);
+did_eta_u   = netcdf.defDim(ncid,'eta_u',Mp);
+did_eta_v   = netcdf.defDim(ncid,'eta_v',M);
+did_eta_rho = netcdf.defDim(ncid,'eta_rho',Mp);
 %
-did_dust_time = netcdf.defDim(ncid, 'dust_time', length(time));
-vid_dust_time = netcdf.defVar(ncid, 'dust_time', 'NC_DOUBLE', did_dust_time);
-vid_dust = netcdf.defVar(ncid, 'dust', 'NC_DOUBLE', [did_xi_rho, did_eta_rho, did_dust_time]);
-vid_dustfer = netcdf.defVar(ncid, 'dustfer', 'NC_DOUBLE', [did_xi_rho, did_eta_rho, did_dust_time]);
-vid_dustpo4 = netcdf.defVar(ncid, 'dustpo4', 'NC_DOUBLE', [did_xi_rho, did_eta_rho, did_dust_time]);
-vid_dustsi = netcdf.defVar(ncid, 'dustsi', 'NC_DOUBLE', [did_xi_rho, did_eta_rho, did_dust_time]);
-vid_solubility2 = netcdf.defVar(ncid, 'solubility2', 'NC_DOUBLE', [did_xi_rho, did_eta_rho, did_dust_time]);
+did_time = netcdf.defDim(ncid,'dust_time',length(time));
+vid_time = netcdf.defVar(ncid,'dust_time','double',did_time);
+dims3 = [did_xi_rho did_eta_rho did_time];   % (dust_time,eta_rho,xi_rho)
+vnames = {'dust','dustfer','dustpo4','dustsi','solubility2'};
+lnames = {'Dust Deposition','Fe Dust Deposition','PO4 Dust Deposition',...
+          'Si Dust Deposition','Fe solubility from Mahowald'};
+units  = {'Kg m-2 s-1','Kg m-2 s-1','Kg m-2 s-1','Kg m-2 s-1','%'};
+for n=1:length(vnames)
+  netcdf.defVar(ncid,vnames{n},'double',dims3);
+end
 %
 oct_write_time_attributes(ncid,'dust_time',cycle,time_unit_att,time_second_unit_att,...
   calendar_att,insecond,add_cycle);
-
 %
-% [conv] línea ncchar duplicada omitida
-netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'dust'), 'long_name', 'Dust Deposition');
-% [conv] línea ncchar duplicada omitida
-netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'dust'), 'units', 'Kg m-2 s-1');
-% [conv] línea ncchar duplicada omitida
-netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'dust'), 'fields', 'dust, scalar, series');
+for n=1:length(vnames)
+  vid=netcdf.inqVarID(ncid,vnames{n});
+  netcdf.putAtt(ncid,vid,'long_name',lnames{n});
+  netcdf.putAtt(ncid,vid,'units',units{n});
+  netcdf.putAtt(ncid,vid,'fields',[vnames{n},', scalar, series']);
+end
 %
-% [conv] línea ncchar duplicada omitida
-netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'dustfer'), 'long_name', 'Fe Dust Deposition');
-% [conv] línea ncchar duplicada omitida
-netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'dustfer'), 'units', 'Kg m-2 s-1');
-% [conv] línea ncchar duplicada omitida
-netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'dustfer'), 'fields', 'dustfer, scalar, series');
-%
-% [conv] línea ncchar duplicada omitida
-netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'dustpo4'), 'long_name', 'PO4 Dust Deposition');
-% [conv] línea ncchar duplicada omitida
-netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'dustpo4'), 'units', 'Kg m-2 s-1');
-% [conv] línea ncchar duplicada omitida
-netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'dustpo4'), 'fields', 'dustpo4, scalar, series');
-%
-% [conv] línea ncchar duplicada omitida
-netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'dustsi'), 'long_name', 'Si Dust Deposition');
-% [conv] línea ncchar duplicada omitida
-netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'dustsi'), 'units', 'Kg m-2 s-1');
-% [conv] línea ncchar duplicada omitida
-netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'dustsi'), 'fields', 'dustsi, scalar, series');
-%
-% [conv] línea ncchar duplicada omitida
-netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'solubility2'), 'long_name', 'Fe solubility from Mahowald');
-% [conv] línea ncchar duplicada omitida
-netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'solubility2'), 'units', ');  %';
-% [conv] línea ncchar duplicada omitida
-netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'solubility2'), 'fields', 'solubility2, scalar, series');
-%
-%%endef(nc);
-
 % Create global attributes
-% [conv] línea ncchar duplicada omitida
-netcdf.putAtt(ncid, netcdf.getConstant('NC_GLOBAL'), 'title', CROCO_title);
-% [conv] línea ncchar duplicada omitida
-netcdf.putAtt(ncid, netcdf.getConstant('NC_GLOBAL'), 'date', date);
-% [conv] línea ncchar duplicada omitida
-netcdf.putAtt(ncid, netcdf.getConstant('NC_GLOBAL'), 'grd_file', grdname);
-% [conv] línea ncchar duplicada omitida
-netcdf.putAtt(ncid, netcdf.getConstant('NC_GLOBAL'), 'type', 'CROCO biology forcing file');
-
+%
+gid=netcdf.getConstant('NC_GLOBAL');
+netcdf.putAtt(ncid,gid,'title',CROCO_title);
+netcdf.putAtt(ncid,gid,'date',date);
+netcdf.putAtt(ncid,gid,'grd_file',grdname);
+netcdf.putAtt(ncid,gid,'type','CROCO biology forcing file');
+netcdf.endDef(ncid);
+%
 % Write time variable
-netcdf.putVar(ncid, netcdf.inqVarID(ncid, 'dust_time'), time.*30);  % if time in month in the dataset !!!
+%
+netcdf.putVar(ncid,vid_time,0,length(time),time.*30); % if time in month in the dataset !!!
 
 netcdf.close(ncid);
 
-ncid = netcdf.open(bioname, 'NC_WRITE');
+ncid=netcdf.open(bioname,'NC_WRITE');
+vid_time=netcdf.inqVarID(ncid,'dust_time');
 %
 % Loop on time
 %
 for tindex=1:length(time)
-  time=netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'dust_time'));
-  netcdf.putVar(ncid, netcdf.inqVarID(ncid, 'dust'), tindex,:,:-1, 1, max(0.,oct_ext_data(dust_file,'dust',tindex,...);  % [conv] 0-based
-             lon,lat,time,Roa,1));
-  netcdf.putVar(ncid, netcdf.inqVarID(ncid, 'dustfer'), tindex,:,:-1, 1, max(0.,oct_ext_data(dust_file,'dustfer',tindex,...);  % [conv] 0-based
-             lon,lat,time,Roa,1));
-  netcdf.putVar(ncid, netcdf.inqVarID(ncid, 'dustpo4'), tindex,:,:-1, 1, max(0.,oct_ext_data(dust_file,'dustpo4',tindex,...);  % [conv] 0-based
-             lon,lat,time,Roa,1));
-  netcdf.putVar(ncid, netcdf.inqVarID(ncid, 'dustsi'), tindex,:,:-1, 1, max(0.,oct_ext_data(dust_file,'dustsi',tindex,...);  % [conv] 0-based
-             lon,lat,time,Roa,1));
-  netcdf.putVar(ncid, netcdf.inqVarID(ncid, 'solubility2'), tindex,:,:-1, 1, max(0.,oct_ext_data(dust_file,'solubility2',tindex,...);  % [conv] 0-based
-             lon,lat,time,Roa,1));
+  time=double(netcdf.getVar(ncid,vid_time,tindex-1,1));
+  for n=1:length(vnames)
+    % nc{var}(tindex,:,:)=X  ->  Fortran order [xi eta time]
+    data=max(0.,oct_ext_data(dust_file,vnames{n},tindex,lon,lat,time,Roa,1));
+    netcdf.putVar(ncid,netcdf.inqVarID(ncid,vnames{n}),[0 0 tindex-1],[Lp Mp 1],data.');
+  end
 end
 netcdf.close(ncid);
 if (makeplot)

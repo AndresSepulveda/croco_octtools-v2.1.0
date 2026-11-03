@@ -2,7 +2,7 @@ function oct_add_dop(oafile,climfile,inifile,gridfile,seas_datafile,...
                  ann_datafile,cycle,makeoa,makeclim,makequota,makeini,Yorig);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-%  function [longrd,latgrd,dop]=oct_add_dop(climfile,gridfile,...
+%  function [longrd,latgrd,dop]=add_dop(climfile,gridfile,...
 %                                       seas_datafile,ann_datafile,...
 %                                       cycle);
 %
@@ -47,12 +47,16 @@ function oct_add_dop(oafile,climfile,inifile,gridfile,seas_datafile,...
 %
 %  Copyright (c) 2001-2006 by Pierrick Penven
 %  e-mail:Pierrick.Penven@ird.fr
+%  Updated    Oct-2026 : Octave version (octave-netcdf, netcdf.* API)
+%  Andres Sepulveda 2026 - Octave adaptations
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+% options for write_time_attributes
+%
 % options for oct_write_time_attributes
 insecond = 0  ;
-add_cycle = 1 ; 
+add_cycle = 1 ;
 %
 % Initialize Yorig if not provided
 if ~exist('Yorig', 'var') ,  Yorig = []; , end
@@ -64,76 +68,56 @@ if ~exist('Yorig', 'var') ,  Yorig = []; , end
 %
 % Read in the grid
 %
-ncid = netcdf.open(gridfile, 'NC_NOWRITE');
-hmax=max(max(netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'h'))));
+ncid=netcdf.open(gridfile,'NC_NOWRITE');
+hmax=max(max(double(netcdf.getVar(ncid,netcdf.inqVarID(ncid,'h')))));
 netcdf.close(ncid);
 %
-% read in the datafiles 
+% read in the datafiles
 %
-ncid = netcdf.open(seas_datafile, 'NC_NOWRITE');
-t=netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'T'));
-t;
+ncid=netcdf.open(seas_datafile,'NC_NOWRITE');
+t=double(netcdf.getVar(ncid,netcdf.inqVarID(ncid,'T')));
+t=t(:);
 netcdf.close(ncid);
-ncid = netcdf.open(ann_datafile, 'NC_NOWRITE');
-zdop=netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'Z'));
+ncid=netcdf.open(ann_datafile,'NC_NOWRITE');
+zdop=double(netcdf.getVar(ncid,netcdf.inqVarID(ncid,'Z')));
+zdop=zdop(:);
 kmax=max(find(zdop<hmax))-1;
 zdop=zdop(1:kmax);
-%disp('Size zdop=')
-size(zdop);
 netcdf.close(ncid);
 %
-% open the OA file  
-% 
+% open the OA file
+%
 if (makeoa)
   disp('Add_dop: creating variables and attributes for the OA file')
-  ncid = netcdf.open(oafile, 'NC_WRITE');
-%  redef(nc);
-
-  %Create Dimensions
-  did_dop_time = netcdf.defDim(ncid, 'dop_time', length(t));
-  %Create Variable
-  vid_dop_time = netcdf.defVar(ncid, 'dop_time', 'NC_DOUBLE', did_dop_time);
-%
-%%
-%
-  %Create Dimensions
-  did_Zdop = netcdf.defDim(ncid, 'Zdop', length(zdop));
-  %Create Variable
-  vid_Zdop = netcdf.defVar(ncid, 'Zdop', 'NC_DOUBLE', did_Zdop);
-%
-%%
-%
-  %Create Variable
-  vid_DOP = netcdf.defVar(ncid, 'DOP', 'NC_DOUBLE', [did_xi_rho, did_eta_rho, did_Zdop, did_dop_time]);
-%
-%%
-%
-  %Create Attribute
-
-  % [conv] línea ncchar duplicada omitida
-  netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'dop_time'), 'long_name', 'time for dop');
+  ncid=netcdf.open(oafile,'NC_WRITE');
+  netcdf.reDef(ncid);
+  %
+  % Create dimensions and variables (netcdf.defVar: dims in reversed order)
+  %
+  did_t=netcdf.defDim(ncid,'dop_time',length(t));
+  vid_t=netcdf.defVar(ncid,'dop_time','double',did_t);
+  did_z=netcdf.defDim(ncid,'Zdop',length(zdop));
+  vid_z=netcdf.defVar(ncid,'Zdop','double',did_z);
+  did_xi=netcdf.inqDimID(ncid,'xi_rho');
+  did_eta=netcdf.inqDimID(ncid,'eta_rho');
+  vid_v=netcdf.defVar(ncid,'DOP','double',[did_xi did_eta did_z did_t]);
+  %
+  % Create attributes
+  %
+  netcdf.putAtt(ncid,vid_t,'long_name','time for dop');
   oct_write_time_attributes(ncid,'dop_time',cycle,time_unit_att,time_second_unit_att,...
                       calendar_att,insecond,add_cycle);
-%
-  % [conv] línea ncchar duplicada omitida
-  netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'Zdop'), 'long_name', 'Depth for DOP');
-  % [conv] línea ncchar duplicada omitida
-  netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'Zdop'), 'units', 'm');
-%
-  % [conv] línea ncchar duplicada omitida
-  netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'DOP'), 'long_name', 'DOP');
-  % [conv] línea ncchar duplicada omitida
-  netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'DOP'), 'units', 'mMol C m-3');
-  % [conv] línea ncchar duplicada omitida
-  netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'DOP'), 'fields', 'DOP, scalar, series');
-%
-%%  endef(nc);
-%
-%% Write variables
-% record deth and time and close
-%
-  netcdf.putVar(ncid, netcdf.inqVarID(ncid, 'dop_time'), t*30);  % if time in month in the dataset !!!
-  netcdf.putVar(ncid, netcdf.inqVarID(ncid, 'Zdop'), zdop);
+  netcdf.putAtt(ncid,vid_z,'long_name','Depth for DOP');
+  netcdf.putAtt(ncid,vid_z,'units','m');
+  netcdf.putAtt(ncid,vid_v,'long_name','DOP');
+  netcdf.putAtt(ncid,vid_v,'units','mMol C m-3');
+  netcdf.putAtt(ncid,vid_v,'fields','DOP, scalar, series');
+  netcdf.endDef(ncid);
+  %
+  % record depth and time and close
+  %
+  netcdf.putVar(ncid,vid_t,0,length(t),t*30); % if time in month in the dataset !!!
+  netcdf.putVar(ncid,vid_z,0,length(zdop),zdop);
   netcdf.close(ncid);
 end
 %
@@ -141,51 +125,33 @@ end
 %
 if (makeclim)
   disp('Add_dop: creating variables and attributes for the Climatology file')
-%
-% open the clim file  
-% 
-  ncid = netcdf.open(climfile, 'NC_WRITE');
-%%  redef(nc);
-  did_dop_time = netcdf.defDim(ncid, 'dop_time', length(t););
-  vid_dop_time = netcdf.defVar(ncid, 'dop_time', 'NC_DOUBLE', did_dop_time);
-  vid_DOP = netcdf.defVar(ncid, 'DOP', 'NC_DOUBLE', [did_xi_rho, did_eta_rho, did_s_rho, did_dop_time]);
-%
-  % [conv] línea ncchar duplicada omitida
-  netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'dop_time'), 'long_name', 'time for dop');
+  %
+  % open the clim file
+  %
+  ncid=netcdf.open(climfile,'NC_WRITE');
+  netcdf.reDef(ncid);
+  did_t=netcdf.defDim(ncid,'dop_time',length(t));
+  vid_t=netcdf.defVar(ncid,'dop_time','double',did_t);
+  did_s=netcdf.inqDimID(ncid,'s_rho');
+  did_xi=netcdf.inqDimID(ncid,'xi_rho');
+  did_eta=netcdf.inqDimID(ncid,'eta_rho');
+  vid_v=netcdf.defVar(ncid,'DOP','double',[did_xi did_eta did_s did_t]);
+  %
+  netcdf.putAtt(ncid,vid_t,'long_name','time for dop');
   oct_write_time_attributes(ncid,'dop_time',cycle,time_unit_att,time_second_unit_att,...
-    calendar_att,insecond,add_cycle);
-%
-  % [conv] línea ncchar duplicada omitida
-  netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'DOP'), 'long_name', 'DOP');
-  % [conv] línea ncchar duplicada omitida
-  netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'DOP'), 'units', 'mMol C m-3');
-  % [conv] línea ncchar duplicada omitida
-  netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'DOP'), 'fields', 'DOP, scalar, series');
-%
-%%  endef(nc);
-%
-% record the time and close
-%
-  netcdf.putVar(ncid, netcdf.inqVarID(ncid, 'dop_time'), t*30);  % if time in month in the dataset !!!
+                      calendar_att,insecond,add_cycle);
+  %
+  netcdf.putAtt(ncid,vid_v,'long_name','DOP');
+  netcdf.putAtt(ncid,vid_v,'units','mMol C m-3');
+  netcdf.putAtt(ncid,vid_v,'fields','DOP, scalar, series');
+  netcdf.endDef(ncid);
+  %
+  % record the time and close
+  %
+  netcdf.putVar(ncid,vid_t,0,length(t),t*30); % if time in month in the dataset !!!
   netcdf.close(ncid);
 end
-% %
-% if (makeini)
-% disp('Add_dop: creating variables and attributes for the Initial file')
-% %
-% % open the clim file
-% %
-% nc=oct_netcdf(inifile,'write');
-% redef(nc);
-% nc{'DOP'} = ncdouble('time','s_rho','eta_rho','xi_rho') ;
-% %
-% nc{'DOP'}.long_name = ncchar('DOP');
-% nc{'DOP'}.long_name = 'DOP';
-% nc{'DOP'}.units = ncchar('mMol C m-3');
-% nc{'DOP'}.units = 'mMol C m-3';
-% %
-% endef(nc);
-% close(nc)
-% end
-
+%
+% (the initial file part is commented out in the Matlab version)
+%
 return

@@ -21,6 +21,8 @@
 %  Olivier Aumont the master, IRD, 2006.                          %
 %  Patricio Marchesiello, chief, IRD, 2007.                       %
 %  Christophe Eugene Raoul Menkes, the slave, IRD, 2007.          %
+%  Updated    Oct-2026 : Octave version (octave-netcdf, netcdf.* API)
+%  Andres Sepulveda 2026 - Octave adaptations
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 clear all
@@ -63,90 +65,84 @@ disp(' ')
 %
 disp(' ')
 disp(' Read in the grid...')
-ncid = netcdf.open(grdname, 'NC_NOWRITE');
-[~,Lp]=netcdf.inqDim(ncid, netcdf.inqDimID(ncid, 'xi_rho'));
-[~,Mp]=netcdf.inqDim(ncid, netcdf.inqDimID(ncid, 'eta_rho'));
+ncid=netcdf.open(grdname,'NC_NOWRITE');
+[~,Lp]=netcdf.inqDim(ncid,netcdf.inqDimID(ncid,'xi_rho'));
+[~,Mp]=netcdf.inqDim(ncid,netcdf.inqDimID(ncid,'eta_rho'));
 L=Lp-1;
 M=Mp-1;
-lon=netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'lon_rho'));
-lat=netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'lat_rho'));
-angle=netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'angle'));
+lon=double(netcdf.getVar(ncid,netcdf.inqVarID(ncid,'lon_rho'))).';
+lat=double(netcdf.getVar(ncid,netcdf.inqVarID(ncid,'lat_rho'))).';
+angle=double(netcdf.getVar(ncid,netcdf.inqVarID(ncid,'angle'))).';
 netcdf.close(ncid);
 %
-% create dust forcing file
+% add the N deposition to the (existing) biology forcing file
+% (created by oct_make_dust.m)
 %
 disp(' Creating file')
-%nc = oct_netcdf(bioname, 'clobber');
-ncid = netcdf.open(bioname, 'NC_WRITE');
-%%result = redef(nc);
+ncid = netcdf.open(bioname,'NC_WRITE');
+netcdf.reDef(ncid);
 %
-did_xi_u = netcdf.defDim(ncid, 'xi_u', L);
-did_xi_v = netcdf.defDim(ncid, 'xi_v', Lp);
-did_xi_rho = netcdf.defDim(ncid, 'xi_rho', Lp);
-did_eta_u = netcdf.defDim(ncid, 'eta_u', Mp);
-did_eta_v = netcdf.defDim(ncid, 'eta_v', M);
-did_eta_rho = netcdf.defDim(ncid, 'eta_rho', Mp);
+% horizontal dimensions: defined only if they do not exist yet
 %
-did_ndepo_time = netcdf.defDim(ncid, 'ndepo_time', length(time));
-vid_ndepo_time = netcdf.defVar(ncid, 'ndepo_time', 'NC_DOUBLE', did_ndepo_time);
-vid_ndepo = netcdf.defVar(ncid, 'ndepo', 'NC_DOUBLE', [did_xi_rho, did_eta_rho, did_ndepo_time]);
-vid_noyndepo = netcdf.defVar(ncid, 'noyndepo', 'NC_DOUBLE', [did_xi_rho, did_eta_rho, did_ndepo_time]);
-vid_nhxndepo = netcdf.defVar(ncid, 'nhxndepo', 'NC_DOUBLE', [did_xi_rho, did_eta_rho, did_ndepo_time]);
+dnames={'xi_u','xi_v','xi_rho','eta_u','eta_v','eta_rho'};
+dlens =[L Lp Lp Mp M Mp];
+for n=1:length(dnames)
+  try
+    netcdf.inqDimID(ncid,dnames{n});
+  catch
+    netcdf.defDim(ncid,dnames{n},dlens(n));
+  end
+end
+did_xi_rho  = netcdf.inqDimID(ncid,'xi_rho');
+did_eta_rho = netcdf.inqDimID(ncid,'eta_rho');
 %
-% [conv] línea ncchar duplicada omitida
-netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'ndepo_time'), 'long_name', 'time for nitrogen deposition');
+did_time = netcdf.defDim(ncid,'ndepo_time',length(time));
+vid_time = netcdf.defVar(ncid,'ndepo_time','double',did_time);
+dims3 = [did_xi_rho did_eta_rho did_time];   % (ndepo_time,eta_rho,xi_rho)
+vnames = {'ndepo','noyndepo','nhxndepo'};
+dnames = {'ndep','noyndepo','nhxndepo'};     % names in the data file
+lnames = {'Nitrogen Deposition','NOy Deposition','NHx Deposition'};
+for n=1:length(vnames)
+  netcdf.defVar(ncid,vnames{n},'double',dims3);
+end
+%
+netcdf.putAtt(ncid,vid_time,'long_name','time for nitrogen deposition');
 oct_write_time_attributes(ncid,'ndepo_time',cycle,time_unit_att,time_second_unit_att,...
   calendar_att,insecond,add_cycle);
 %
-% [conv] línea ncchar duplicada omitida
-netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'ndepo'), 'long_name', 'Nitrogen Deposition');
-% [conv] línea ncchar duplicada omitida
-netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'ndepo'), 'units', 'KgN m-2 s-1');
-% [conv] línea ncchar duplicada omitida
-netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'ndepo'), 'fields', 'ndepo, scalar, series');
+for n=1:length(vnames)
+  vid=netcdf.inqVarID(ncid,vnames{n});
+  netcdf.putAtt(ncid,vid,'long_name',lnames{n});
+  netcdf.putAtt(ncid,vid,'units','KgN m-2 s-1');
+  netcdf.putAtt(ncid,vid,'fields',[vnames{n},', scalar, series']);
+end
 %
-% [conv] línea ncchar duplicada omitida
-netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'noyndepo'), 'long_name', 'NOy Deposition');
-% [conv] línea ncchar duplicada omitida
-netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'noyndepo'), 'units', 'KgN m-2 s-1');
-% [conv] línea ncchar duplicada omitida
-netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'noyndepo'), 'fields', 'noyndepo, scalar, series');
-%
-% [conv] línea ncchar duplicada omitida
-netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'nhxndepo'), 'long_name', 'NHx Deposition');
-% [conv] línea ncchar duplicada omitida
-netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'nhxndepo'), 'units', 'KgN m-2 s-1');
-% [conv] línea ncchar duplicada omitida
-netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'nhxndepo'), 'fields', 'nhxndepo, scalar, series');
-%
-%%endef(nc);
-
 % Create global attributes
-% [conv] línea ncchar duplicada omitida
-netcdf.putAtt(ncid, netcdf.getConstant('NC_GLOBAL'), 'title', CROCO_title);
-% [conv] línea ncchar duplicada omitida
-netcdf.putAtt(ncid, netcdf.getConstant('NC_GLOBAL'), 'date', date);
-% [conv] línea ncchar duplicada omitida
-netcdf.putAtt(ncid, netcdf.getConstant('NC_GLOBAL'), 'grd_file', grdname);
-% [conv] línea ncchar duplicada omitida
-netcdf.putAtt(ncid, netcdf.getConstant('NC_GLOBAL'), 'type', 'CROCO biology forcing file');
-
+%
+gid=netcdf.getConstant('NC_GLOBAL');
+netcdf.putAtt(ncid,gid,'title',CROCO_title);
+netcdf.putAtt(ncid,gid,'date',date);
+netcdf.putAtt(ncid,gid,'grd_file',grdname);
+netcdf.putAtt(ncid,gid,'type','CROCO biology forcing file');
+netcdf.endDef(ncid);
+%
 % Write time variable
-netcdf.putVar(ncid, netcdf.inqVarID(ncid, 'ndepo_time'), time.*30);  % if time in month in the dataset !!!
+%
+netcdf.putVar(ncid,vid_time,0,length(time),time.*30); % if time in month in the dataset !!!
 
 netcdf.close(ncid);
 
-ncid = netcdf.open(bioname, 'NC_WRITE');
+ncid=netcdf.open(bioname,'NC_WRITE');
+vid_time=netcdf.inqVarID(ncid,'ndepo_time');
 %
 % Loop on time
 for tindex=1:length(time)
-  time=netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'ndepo_time'));
-  netcdf.putVar(ncid, netcdf.inqVarID(ncid, 'ndepo'), tindex,:,:-1, 1, max(0.,oct_ext_data(ndep_file,'ndep',tindex,...);  % [conv] 0-based
-             lon,lat,time,Roa,1));
-  netcdf.putVar(ncid, netcdf.inqVarID(ncid, 'noyndepo'), tindex,:,:-1, 1, max(0.,oct_ext_data(ndep_file,'noyndepo',tindex,...);  % [conv] 0-based
-             lon,lat,time,Roa,1));
-  netcdf.putVar(ncid, netcdf.inqVarID(ncid, 'nhxndepo'), tindex,:,:-1, 1, max(0.,oct_ext_data(ndep_file,'nhxndepo',tindex,...);  % [conv] 0-based
-             lon,lat,time,Roa,1));
+  time=double(netcdf.getVar(ncid,vid_time,tindex-1,1));
+  for n=1:length(vnames)
+    % nc{var}(tindex,:,:)=X  ->  Fortran order [xi eta time]
+    data=max(0.,oct_ext_data(ndep_file,dnames{n},tindex,lon,lat,time,Roa,1));
+    netcdf.putVar(ncid,netcdf.inqVarID(ncid,vnames{n}),[0 0 tindex-1],[Lp Mp 1],data.');
+  end
 end
 %
 netcdf.close(ncid);

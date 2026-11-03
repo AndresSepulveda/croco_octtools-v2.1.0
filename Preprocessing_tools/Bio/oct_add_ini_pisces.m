@@ -56,11 +56,7 @@ if makequota
   units  = [units {'mMol C m-3','mMol C m-3'}];
 end
 for n=1:length(vnames)
-  try                                   % already there (second run): reused
-    vid = netcdf.inqVarID(ncid,vnames{n});
-  catch
-    vid = netcdf.defVar(ncid,vnames{n},'double',dims4);
-  end
+  vid = netcdf.defVar(ncid,vnames{n},'double',dims4);
 %
 %  Create attributes
 %
