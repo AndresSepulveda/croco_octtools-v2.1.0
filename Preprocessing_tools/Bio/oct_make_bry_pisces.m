@@ -47,6 +47,8 @@
 %  Olivier Aumont the master, IRD, 2006.                          %
 %  Patricio Marchesiello, chief, IRD, 2007.                       %
 %  Christophe Eugene Raoul Menkes, the slave, IRD, 2007.          %
+%  Updated    Oct-2026 : Octave version (octave-netcdf, netcdf.* API)
+%  Andres Sepulveda 2026 - Octave adaptations
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -109,12 +111,12 @@ disp([' Title: ',CROCO_title])
 %
 disp(' ')
 disp(' Read in the grid...')
-ncid = netcdf.open(grdname, 'NC_NOWRITE');
-lon=netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'lon_rho'));
-lat=netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'lat_rho'));
-[~,Lp]=netcdf.inqDim(ncid, netcdf.inqDimID(ncid, 'xi_rho'));
-[~,Mp]=netcdf.inqDim(ncid, netcdf.inqDimID(ncid, 'eta_rho'));
-hmax=max(max(netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'h'))));
+ncid=netcdf.open(grdname,'NC_NOWRITE');
+lon=double(netcdf.getVar(ncid,netcdf.inqVarID(ncid,'lon_rho'))).';
+lat=double(netcdf.getVar(ncid,netcdf.inqVarID(ncid,'lat_rho'))).';
+[~,Lp]=netcdf.inqDim(ncid,netcdf.inqDimID(ncid,'xi_rho'));
+[~,Mp]=netcdf.inqDim(ncid,netcdf.inqDimID(ncid,'eta_rho'));
+hmax=max(max(double(netcdf.getVar(ncid,netcdf.inqVarID(ncid,'h')))));
 netcdf.close(ncid);
 %
 % Redefine the boundary file
@@ -137,8 +139,8 @@ if (makeZbry)
   %
   % get Z
   %
-  ncid = netcdf.open(no3_ann_data, 'NC_NOWRITE');
-  Z=netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'Z'));
+  ncid=netcdf.open(no3_ann_data,'NC_NOWRITE');
+  Z=double(netcdf.getVar(ncid,netcdf.inqVarID(ncid,'Z')));
   kmax=max(find(Z<hmax))-1;
   Z=Z(1:kmax);
   netcdf.close(ncid);
