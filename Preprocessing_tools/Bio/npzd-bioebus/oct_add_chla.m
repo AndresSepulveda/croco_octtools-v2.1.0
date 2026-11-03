@@ -2,7 +2,7 @@ function oct_add_chla(climfile,gridfile,seas_datafile,cycle,Roa);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-%  function oct_add_chla(climfile,gridfile,seas_datafile,cycle);
+%  function add_chla(climfile,gridfile,seas_datafile,cycle);
 %
 %  Add chlorophyll (mg C) in a CROCO climatology file.
 %  take seasonal data for the surface levels and extrapole 
@@ -47,28 +47,32 @@ function oct_add_chla(climfile,gridfile,seas_datafile,cycle,Roa);
 %
 %  Copyright (c) 2001-2006 by Pierrick Penven 
 %  e-mail:Pierrick.Penven@ird.fr  
+%  Updated    Oct-2026 : Octave version (octave-netcdf, netcdf.* API)
+%  Andres Sepulveda 2026 - Octave adaptations
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
 %
 disp('Add_chla: creating variable and attribute')
 default=NaN;
 %
 % read in the datafile 
 %
-ncidseas = netcdf.open(seas_datafile, 'NC_NOWRITE');
-x=netcdf.getVar(ncidseas, netcdf.inqVarID(ncidseas, 'X'));
-y=netcdf.getVar(ncidseas, netcdf.inqVarID(ncidseas, 'Y'));
-t=netcdf.getVar(ncidseas, netcdf.inqVarID(ncidseas, 'T'));
+ncidseas=netcdf.open(seas_datafile,'NC_NOWRITE');
+x=double(netcdf.getVar(ncidseas,netcdf.inqVarID(ncidseas,'X')));
+y=double(netcdf.getVar(ncidseas,netcdf.inqVarID(ncidseas,'Y')));
+t=double(netcdf.getVar(ncidseas,netcdf.inqVarID(ncidseas,'T')));
+x=x(:); y=y(:); t=t(:);
 tlen=length(t);
 %
 % open the grid file  
 % 
-ng_id = netcdf.open(gridfile, 'NC_NOWRITE');
-lon=netcdf.getVar(ng_id, netcdf.inqVarID(ng_id, 'lon_rho'));
+ng=netcdf.open(gridfile,'NC_NOWRITE');
+lon=double(netcdf.getVar(ng,netcdf.inqVarID(ng,'lon_rho'))).';
 %lon(lon<0)=lon(lon<0)+360;
-lat=netcdf.getVar(ng_id, netcdf.inqVarID(ng_id, 'lat_rho'));
-h=netcdf.getVar(ng_id, netcdf.inqVarID(ng_id, 'h'));
-netcdf.close(ng_id);
+lat=double(netcdf.getVar(ng,netcdf.inqVarID(ng,'lat_rho'))).';
+h=double(netcdf.getVar(ng,netcdf.inqVarID(ng,'h'))).';
+netcdf.close(ng);
 [M,L]=size(lon);
 dl=2.;
 minlon=min(min(lon))-dl;
@@ -84,46 +88,45 @@ y=y(jmin:jmax);
 %
 % open the clim file  
 % 
-ncid = netcdf.open(climfile, 'NC_WRITE');
-theta_s = netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'theta_s'));
-theta_b =  netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'theta_b'));
-Tcline  =  netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'Tcline'));
-vtransform=netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'Vtransform'));
-if  ~exist('vtransform')
-    vtransform=1; %Old Vtransform
-    disp([' NO VTRANSFORM parameter found'])
+ncid=netcdf.open(climfile,'NC_WRITE');
+theta_s = double(netcdf.getVar(ncid,netcdf.inqVarID(ncid,'theta_s')));
+theta_b = double(netcdf.getVar(ncid,netcdf.inqVarID(ncid,'theta_b')));
+Tcline  = double(netcdf.getVar(ncid,netcdf.inqVarID(ncid,'Tcline')));
+try
+  vtransform=double(netcdf.getVar(ncid,netcdf.inqVarID(ncid,'Vtransform')));
+catch
+  vtransform=1; %Old Vtransform
+  disp([' NO VTRANSFORM parameter found'])
 end
-[~,N]=netcdf.inqDim(ncid, netcdf.inqDimID(ncid, 's_rho'));
+[~,N]=netcdf.inqDim(ncid,netcdf.inqDimID(ncid,'s_rho'));
 
-%redef(nc);
-did_chla_time = netcdf.defDim(ncid, 'chla_time', tlen);
-vid_chla_time = netcdf.defVar(ncid, 'chla_time', 'NC_DOUBLE', did_chla_time);
-vid_CHLA = netcdf.defVar(ncid, 'CHLA', 'NC_DOUBLE', [did_xi_rho, did_eta_rho, did_s_rho, did_chla_time]);
+netcdf.reDef(ncid);
+did_t=oct_defdim(ncid,'chla_time',tlen);
+vid_t=oct_defvar(ncid,'chla_time','double',did_t);
+vid_chla=oct_defvar(ncid,'CHLA','double',...
+         [netcdf.inqDimID(ncid,'xi_rho') netcdf.inqDimID(ncid,'eta_rho') ...
+          netcdf.inqDimID(ncid,'s_rho') did_t]);
 %
-% [conv] línea ncchar duplicada omitida
-netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'chla_time'), 'long_name', 'time for chlorophyll');
-% [conv] línea ncchar duplicada omitida
-netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'chla_time'), 'units', 'day');
+netcdf.putAtt(ncid,vid_t,'long_name','time for chlorophyll');
+netcdf.putAtt(ncid,vid_t,'units','day');
 if cycle~=0
-  netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'chla_time'), 'cycle_length', cycle);
+  netcdf.putAtt(ncid,vid_t,'cycle_length',cycle);
 end
 %
-% [conv] línea ncchar duplicada omitida
-netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'CHLA'), 'long_name', 'Chlorophyll');
-% [conv] línea ncchar duplicada omitida
-netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'CHLA'), 'units', 'mg C');
-% [conv] línea ncchar duplicada omitida
-netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'CHLA'), 'fields', 'CHLA, scalar, series');
+netcdf.putAtt(ncid,vid_chla,'long_name','Chlorophyll');
+netcdf.putAtt(ncid,vid_chla,'units','mg C');
+netcdf.putAtt(ncid,vid_chla,'fields','CHLA, scalar, series');
 %
-%endef(nc);
+netcdf.endDef(ncid);
 %
 % Record the time
 %
-netcdf.putVar(ncid, netcdf.inqVarID(ncid, 'chla_time'), t*30);  % if time in month in the dataset !!!
+netcdf.putVar(ncid,vid_t,0,tlen,t*30); % if time in month in the dataset !!!
 %
 % Get the missing values
 %
-missval=netcdf.getAtt(ncidseas, netcdf.inqVarID(ncidseas, 'chlorophyll'), 'missing_value');
+vid_seas=netcdf.inqVarID(ncidseas,'chlorophyll');
+missval=double(netcdf.getAtt(ncidseas,vid_seas,'missing_value'));
 %
 % loop on time
 %
@@ -133,7 +136,9 @@ disp(['time index: ',num2str(l),' of total: ',num2str(tlen)])
 % extrapole the annual dataset on the horizontal croco grid
 %
   disp('Add_chla: horizontal interpolation of surface data')
-  surfchla=squeeze(netcdf.getVar(ncidseas, netcdf.inqVarID(ncidseas, 'chlorophyll')));
+  % chlorophyll(l,jmin:jmax,imin:imax) -> start/count [X Y T]
+  surfchla=double(netcdf.getVar(ncidseas,vid_seas,[imin-1 jmin-1 l-1],...
+                  [imax-imin+1 jmax-jmin+1 1])).';
   surfchla=oct_get_missing_val(x,y,surfchla,missval,Roa,default);
   surfchlacroco=interp2(x,y,surfchla,lon,lat);
 %
@@ -143,7 +148,8 @@ disp(['time index: ',num2str(l),' of total: ',num2str(tlen)])
   disp(['Add_chla: vertical ',...
   'extrapolation of chlorophyll'])
   chlacroco=oct_extr_chlo(surfchlacroco,zcroco);
-  netcdf.putVar(ncid, netcdf.inqVarID(ncid, 'CHLA'), l,:,:,:-1, 1, chlacroco);  % [conv] 0-based
+  % nc{'CHLA'}(l,:,:,:)=chlacroco (N,M,L) -> Fortran [L M N 1]
+  netcdf.putVar(ncid,vid_chla,[0 0 0 l-1],[L M N 1],permute(chlacroco,[3 2 1]));
 end
 netcdf.close(ncid);
 netcdf.close(ncidseas);

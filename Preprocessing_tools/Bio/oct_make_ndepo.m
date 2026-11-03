@@ -90,20 +90,20 @@ for n=1:length(dnames)
   try
     netcdf.inqDimID(ncid,dnames{n});
   catch
-    netcdf.defDim(ncid,dnames{n},dlens(n));
+    oct_defdim(ncid,dnames{n},dlens(n));
   end
 end
 did_xi_rho  = netcdf.inqDimID(ncid,'xi_rho');
 did_eta_rho = netcdf.inqDimID(ncid,'eta_rho');
 %
-did_time = netcdf.defDim(ncid,'ndepo_time',length(time));
-vid_time = netcdf.defVar(ncid,'ndepo_time','double',did_time);
+did_time = oct_defdim(ncid,'ndepo_time',length(time));
+vid_time = oct_defvar(ncid,'ndepo_time','double',did_time);
 dims3 = [did_xi_rho did_eta_rho did_time];   % (ndepo_time,eta_rho,xi_rho)
 vnames = {'ndepo','noyndepo','nhxndepo'};
 dnames = {'ndep','noyndepo','nhxndepo'};     % names in the data file
 lnames = {'Nitrogen Deposition','NOy Deposition','NHx Deposition'};
 for n=1:length(vnames)
-  netcdf.defVar(ncid,vnames{n},'double',dims3);
+  oct_defvar(ncid,vnames{n},'double',dims3);
 end
 %
 netcdf.putAtt(ncid,vid_time,'long_name','time for nitrogen deposition');

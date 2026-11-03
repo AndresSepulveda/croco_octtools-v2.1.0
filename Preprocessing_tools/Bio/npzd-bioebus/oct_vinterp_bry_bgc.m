@@ -26,43 +26,54 @@ function oct_vinterp_bry_bgc(bryname,grdname,Zbryname,time,vname,obcndx)
 %
 %  Copyright (c) 2005-2006 by Pierrick Penven 
 %  e-mail:Pierrick.Penven@ird.fr  
+%  Updated    Oct-2026 : Octave version (octave-netcdf, netcdf.* API)
+%  Andres Sepulveda 2026 - Octave adaptations
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
 % open the grid file  
 % 
-ng_id = netcdf.open(grdname, 'NC_NOWRITE');
-[~,L]=netcdf.inqDim(ng_id, netcdf.inqDimID(ng_id, 'xi_rho'));
-[~,M]=netcdf.inqDim(ng_id, netcdf.inqDimID(ng_id, 'eta_rho'));
+%
+% open the grid file  
+% 
+ng=netcdf.open(grdname,'NC_NOWRITE');
+[~,L]=netcdf.inqDim(ng,netcdf.inqDimID(ng,'xi_rho'));
+[~,M]=netcdf.inqDim(ng,netcdf.inqDimID(ng,'eta_rho'));
+vid_h=netcdf.inqVarID(ng,'h');
+% h(j,i) slices: start/count in Fortran order [xi eta]
 if obcndx==1
-  h=netcdf.getVar(ng_id, netcdf.inqVarID(ng_id, 'h'));
+  h=double(netcdf.getVar(ng,vid_h,[0 0],[L 1]));     % h(1,:)
 elseif obcndx==2
-  h=netcdf.getVar(ng_id, netcdf.inqVarID(ng_id, 'h'));
+  h=double(netcdf.getVar(ng,vid_h,[L-1 0],[1 M]));   % h(:,L)
 elseif obcndx==3
-  h=netcdf.getVar(ng_id, netcdf.inqVarID(ng_id, 'h'));
+  h=double(netcdf.getVar(ng,vid_h,[0 M-1],[L 1]));   % h(M,:)
 elseif obcndx==4
-  h=netcdf.getVar(ng_id, netcdf.inqVarID(ng_id, 'h'));
+  h=double(netcdf.getVar(ng,vid_h,[0 0],[1 M]));     % h(:,1)
 end
-netcdf.close(ng_id);
+h=h(:).';
+netcdf.close(ng);
+nx=length(h);
 %
 % open the boundary file  
 % 
-ncid = netcdf.open(bryname, 'NC_WRITE');
-theta_s = netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'theta_s'));
-theta_b =  netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'theta_b'));
-hc  =  netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'hc'));
-[~,N]=netcdf.inqDim(ncid, netcdf.inqDimID(ncid, 's_rho'));
-vtransform = netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'Vtransform'));
-if  ~exist('vtransform')
-    vtransform=1; %Old Vtransform
-    disp([' NO VTRANSFORM parameter found'])
-    disp([' USE TRANSFORM default value vtransform = 1'])
+ncid=netcdf.open(bryname,'NC_WRITE');
+theta_s = double(netcdf.getVar(ncid,netcdf.inqVarID(ncid,'theta_s')));
+theta_b = double(netcdf.getVar(ncid,netcdf.inqVarID(ncid,'theta_b')));
+hc      = double(netcdf.getVar(ncid,netcdf.inqVarID(ncid,'hc')));
+[~,N]=netcdf.inqDim(ncid,netcdf.inqDimID(ncid,'s_rho'));
+try
+  vtransform = double(netcdf.getVar(ncid,netcdf.inqVarID(ncid,'Vtransform')));
+catch
+  vtransform=1; %Old Vtransform
+  disp([' NO VTRANSFORM parameter found'])
+  disp([' USE TRANSFORM default value vtransform = 1'])
 end
 % open the oa file  
 % 
-noa_id = netcdf.open(Zbryname, 'NC_NOWRITE');
-z=-netcdf.getVar(noa_id, netcdf.inqVarID(noa_id, 'Z'));
-t=netcdf.getVar(noa_id, netcdf.inqVarID(noa_id, time));
+noa=netcdf.open(Zbryname,'NC_NOWRITE');
+z=-double(netcdf.getVar(noa,netcdf.inqVarID(noa,'Z')));
+t=double(netcdf.getVar(noa,netcdf.inqVarID(noa,time)));
+z=z(:);
 tlen=length(t);
 Nz0=length(z);
 %
@@ -88,11 +99,13 @@ z=z(1:Nz);
 %
 % loop on time
 %
-
+vid_in=netcdf.inqVarID(noa,vname);
+vid_out=netcdf.inqVarID(ncid,vname);
 for l=1:tlen
 %for l=1:1
   disp([' Time index: ',num2str(l),' of total: ',num2str(tlen)])
-  var=squeeze(netcdf.getVar(noa_id, netcdf.inqVarID(noa_id, vname)));
+  % noa{vname}(l,:,:) -> (Z,npoints)
+  var=double(netcdf.getVar(noa,vid_in,[0 0 l-1],[nx Nz0 1])).';
   if addsurf
     var=cat(1,var(1,:),var);
   end
@@ -100,9 +113,11 @@ for l=1:tlen
     var=cat(1,var,var(end,:));
   end
   var=var(1:Nz,:);
-  netcdf.putVar(ncid, netcdf.inqVarID(ncid, vname), l,:,:-1, 1, oct_ztosigma_1d(flip(var,1),zcroco,flipud(z)));  % [conv] 0-based
+  % nc{vname}(l,:,:)=... (N,npoints) -> Fortran [npoints N 1]
+  var=oct_ztosigma_1d(flip(var,1),zcroco,flipud(z));
+  netcdf.putVar(ncid,vid_out,[0 0 l-1],[nx N 1],var.');
 end
 netcdf.close(ncid);
-netcdf.close(noa_id);
+netcdf.close(noa);
 
 return

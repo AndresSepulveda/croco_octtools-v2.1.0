@@ -83,22 +83,22 @@ netcdf.close(ncid);
 disp(' Creating file')
 ncid = netcdf.create(bioname,'NC_CLOBBER');
 %
-did_xi_u    = netcdf.defDim(ncid,'xi_u',L);
-did_xi_v    = netcdf.defDim(ncid,'xi_v',Lp);
-did_xi_rho  = netcdf.defDim(ncid,'xi_rho',Lp);
-did_eta_u   = netcdf.defDim(ncid,'eta_u',Mp);
-did_eta_v   = netcdf.defDim(ncid,'eta_v',M);
-did_eta_rho = netcdf.defDim(ncid,'eta_rho',Mp);
+did_xi_u    = oct_defdim(ncid,'xi_u',L);
+did_xi_v    = oct_defdim(ncid,'xi_v',Lp);
+did_xi_rho  = oct_defdim(ncid,'xi_rho',Lp);
+did_eta_u   = oct_defdim(ncid,'eta_u',Mp);
+did_eta_v   = oct_defdim(ncid,'eta_v',M);
+did_eta_rho = oct_defdim(ncid,'eta_rho',Mp);
 %
-did_time = netcdf.defDim(ncid,'dust_time',length(time));
-vid_time = netcdf.defVar(ncid,'dust_time','double',did_time);
+did_time = oct_defdim(ncid,'dust_time',length(time));
+vid_time = oct_defvar(ncid,'dust_time','double',did_time);
 dims3 = [did_xi_rho did_eta_rho did_time];   % (dust_time,eta_rho,xi_rho)
 vnames = {'dust','dustfer','dustpo4','dustsi','solubility2'};
 lnames = {'Dust Deposition','Fe Dust Deposition','PO4 Dust Deposition',...
           'Si Dust Deposition','Fe solubility from Mahowald'};
 units  = {'Kg m-2 s-1','Kg m-2 s-1','Kg m-2 s-1','Kg m-2 s-1','%'};
 for n=1:length(vnames)
-  netcdf.defVar(ncid,vnames{n},'double',dims3);
+  oct_defvar(ncid,vnames{n},'double',dims3);
 end
 %
 oct_write_time_attributes(ncid,'dust_time',cycle,time_unit_att,time_second_unit_att,...

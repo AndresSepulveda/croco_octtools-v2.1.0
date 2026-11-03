@@ -14,6 +14,8 @@
 %
 %  Elodie Gutknecht, 2013
 %  Gildas Cambon, 2013
+%  Updated    Oct-2026 : Octave version (octave-netcdf, netcdf.* API)
+%  Andres Sepulveda 2026 - Octave adaptations
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 clear all
 close all
@@ -37,30 +39,31 @@ if ~exist('Yorig', 'var') ,  Yorig = []; , end
 %
 %
 %=========
-
 if makeini
-    ncid = netcdf.open(grdname, 'NC_NOWRITE');
-    h = netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'h'));
-    netcdf.close(ncid);
+    nc=netcdf.open(grdname,'NC_NOWRITE');
+    h = double(netcdf.getVar(nc,netcdf.inqVarID(nc,'h'))).';
+    netcdf.close(nc);
     % O2 initial conditions
-    ncid = netcdf.open(ininame, 'NC_NOWRITE');
-    theta_s = netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'theta_s'));
-    theta_b = netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'theta_b'));
-    Tcline = netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'Tcline'));
-    [~,N]=netcdf.inqDim(ncid, netcdf.inqDimID(ncid, 's_rho'));
-    vtransform=netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'Vtransform'));
-    if  ~exist('vtransform')
+    nc=netcdf.open(ininame,'NC_NOWRITE');
+    theta_s = double(netcdf.getVar(nc,netcdf.inqVarID(nc,'theta_s')));
+    theta_b = double(netcdf.getVar(nc,netcdf.inqVarID(nc,'theta_b')));
+    Tcline  = double(netcdf.getVar(nc,netcdf.inqVarID(nc,'Tcline')));
+    [~,N]=netcdf.inqDim(nc,netcdf.inqDimID(nc,'s_rho'));
+    try
+        vtransform=double(netcdf.getVar(nc,netcdf.inqVarID(nc,'Vtransform')));
+    catch
         vtransform=1; %Old Vtransform
         disp([' NO VTRANSFORM parameter found'])
         disp([' USE TRANSFORM default value vtransform = 1'])
     end
-    O2_ini   = netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'O2'));
-    netcdf.close(ncid);
+    % nc{'O2'}(:) : (time=1,N,M,L) squeezed -> (N,M,L)
+    O2_ini = permute(double(netcdf.getVar(nc,netcdf.inqVarID(nc,'O2'))),[3 2 1]);
+    netcdf.close(nc);
     type = 'initial conditions file' ;
     history = 'CROCO' ;
     [KK,LL,MM]=size(O2_ini);
     %
-    zw_ini=oct_zlevs(h,0.,theta_s,theta_b,Tcline,N,'w',vtransform);
+    zw_ini=oct_zlevs(h,0.*h,theta_s,theta_b,Tcline,N,'w',vtransform);
     N2O_ini=zeros(KK,LL,MM);N2O_ini=NaN;
     for k=1:KK
         for j=1:LL
@@ -73,42 +76,45 @@ if makeini
     find(isnan(N2O_ini)==1);%
     %
     % open the ini file
-    ncid = netcdf.open(ininame, 'NC_WRITE');
+    nc = netcdf.open(ininame,'NC_WRITE');
     % new variable
-    %%redef(nc);
+    netcdf.reDef(nc);
     %
-    vid_N2O = netcdf.defVar(ncid, 'N2O', 'NC_DOUBLE', [did_xi_rho, did_eta_rho, did_s_rho, did_time]);
-    netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'N2O'), 'long_name', 'Nitrous oxide');
-    netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'N2O'), 'fields', 'NO2, scalar, series');
-    %%endef(nc);
-    % write new variable
-    netcdf.putVar(ncid, netcdf.inqVarID(ncid, 'N2O'), :,:,:-1, 1, N2O_ini);  % [conv] 0-based
+    vid=oct_defvar(nc,'N2O','double',...
+        [netcdf.inqDimID(nc,'xi_rho') netcdf.inqDimID(nc,'eta_rho') ...
+         netcdf.inqDimID(nc,'s_rho') netcdf.inqDimID(nc,'time')]);
+    netcdf.putAtt(nc,vid,'long_name','Nitrous oxide');
+    netcdf.putAtt(nc,vid,'fields','NO2, scalar, series');
+    netcdf.endDef(nc);
+    % write new variable : (N,M,L) -> Fortran [L M N 1]
+    netcdf.putVar(nc,vid,[0 0 0 0],[MM LL KK 1],permute(N2O_ini,[3 2 1]));
     % Synchronize on disk
-    netcdf.close(ncid);
+    netcdf.close(nc);
 end
-
 %==========
 if makeclim
-    ncid = netcdf.open(grdname, 'NC_NOWRITE');
-    h = netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'h'));
-    netcdf.close(ncid);
+    nc=netcdf.open(grdname,'NC_NOWRITE');
+    h = double(netcdf.getVar(nc,netcdf.inqVarID(nc,'h'))).';
+    netcdf.close(nc);
     % O2 climatological conditions
-    ncid = netcdf.open(clmname, 'NC_NOWRITE');
-    theta_s = netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'theta_s'));
-    theta_b = netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'theta_b'));
-    Tcline = netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'Tcline'));
-    [~,N]=netcdf.inqDim(ncid, netcdf.inqDimID(ncid, 's_rho'));
-    vtransform=netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'Vtransform'));
-    if  ~exist('vtransform')
+    nc=netcdf.open(clmname,'NC_NOWRITE');
+    theta_s = double(netcdf.getVar(nc,netcdf.inqVarID(nc,'theta_s')));
+    theta_b = double(netcdf.getVar(nc,netcdf.inqVarID(nc,'theta_b')));
+    Tcline  = double(netcdf.getVar(nc,netcdf.inqVarID(nc,'Tcline')));
+    [~,N]=netcdf.inqDim(nc,netcdf.inqDimID(nc,'s_rho'));
+    try
+        vtransform=double(netcdf.getVar(nc,netcdf.inqVarID(nc,'Vtransform')));
+    catch
         vtransform=1; %Old Vtransform
         disp([' NO VTRANSFORM parameter found'])
         disp([' USE TRANSFORM default value vtransform = 1'])
     end
-    O2_clm  = netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'O2'));
-    O2_time = netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'o2_time'));
-    O2_cycle = netcdf.getAtt(ncid, netcdf.inqVarID(ncid, 'o2_time'), 'cycle_length');
-    zeta = netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'zeta'));
-    netcdf.close(ncid);
+    vid_o2t = netcdf.inqVarID(nc,'o2_time');
+    O2_clm  = permute(double(netcdf.getVar(nc,netcdf.inqVarID(nc,'O2'))),[4 3 2 1]);
+    O2_time = double(netcdf.getVar(nc,vid_o2t));
+    O2_cycle = double(netcdf.getAtt(nc,vid_o2t,'cycle_length'));
+    zeta = permute(double(netcdf.getVar(nc,netcdf.inqVarID(nc,'zeta'))),[3 2 1]);
+    netcdf.close(nc);
     [TT,KK,LL,MM]=size(O2_clm);
     for itps=1:length(O2_time)
         zw_clm(itps,:,:,:)=oct_zlevs(h,squeeze(zeta(itps,:,:)),theta_s,theta_b,Tcline,N,'w',vtransform);
@@ -120,7 +126,8 @@ if makeclim
                 for i=1:MM
                     zw= squeeze(zw_clm(t,k,j,i));
                     O2=squeeze(O2_clm(t,k,j,i));
-                    N2O_clm(t,k,j,i)=oct_nevis_2003(zw,02);
+                    % (the Matlab version passes the constant 02 instead of O2: typo fixed)
+                    N2O_clm(t,k,j,i)=oct_nevis_2003(zw,O2);
                 end
             end
         end
@@ -134,67 +141,65 @@ if makeclim
     %
     % open the clm file
     %
-    ncid = netcdf.open(clmname, 'NC_WRITE');
+    nc = netcdf.open(clmname,'NC_WRITE');
     %
     % new variable
     %
-    %%redef(nc);
-    did_n2o_time = netcdf.defDim(ncid, 'n2o_time', TT);
-    vid_n2o_time = netcdf.defVar(ncid, 'n2o_time', 'NC_DOUBLE', did_n2o_time);
-    % [conv] línea ncchar duplicada omitida
-    netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'n2o_time'), 'long_name', 'time climatological N2O');
-    oct_write_time_attributes(ncid,'n2o_time',O2_cycle,time_unit_att,time_second_unit_att,...
+    netcdf.reDef(nc);
+    did_t=oct_defdim(nc,'n2o_time',TT);
+    vid_t=oct_defvar(nc,'n2o_time','double',did_t);
+    netcdf.putAtt(nc,vid_t,'long_name','time climatological N2O');
+    oct_write_time_attributes(nc,'n2o_time',O2_cycle,time_unit_att,time_second_unit_att,...
         calendar_att,0,1);
-
-    vid_N2O = netcdf.defVar(ncid, 'N2O', 'NC_DOUBLE', [did_xi_rho, did_eta_rho, did_s_rho, did_n2o_time]);
-    % [conv] línea ncchar duplicada omitida
-    netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'N2O'), 'long_name', 'Nitrous oxide');
-    % [conv] línea ncchar duplicada omitida
-    netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'N2O'), 'units', 'mMol N2O m-3');
-    % [conv] línea ncchar duplicada omitida
-    netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'N2O'), 'fields', 'NO2, scalar, series');
-    %%endef(nc);
+    vid=oct_defvar(nc,'N2O','double',...
+        [netcdf.inqDimID(nc,'xi_rho') netcdf.inqDimID(nc,'eta_rho') ...
+         netcdf.inqDimID(nc,'s_rho') did_t]);
+    netcdf.putAtt(nc,vid,'long_name','Nitrous oxide');
+    netcdf.putAtt(nc,vid,'units','mMol N2O m-3');
+    netcdf.putAtt(nc,vid,'fields','NO2, scalar, series');
+    netcdf.endDef(nc);
     %
-    % write new variable
+    % write new variable : (T,N,M,L) -> Fortran [L M N T]
     %
-    netcdf.putVar(ncid, netcdf.inqVarID(ncid, 'n2o_time'), O2_time(:));
-    netcdf.putVar(ncid, netcdf.inqVarID(ncid, 'N2O'), :,:,:,:-1, 1, N2O_clm(:));  % [conv] 0-based
+    netcdf.putVar(nc,vid_t,0,TT,O2_time(:));
+    netcdf.putVar(nc,vid,[0 0 0 0],[MM LL KK TT],permute(N2O_clm,[4 3 2 1]));
     %
     % Synchronize on disk
     %
-    netcdf.close(ncid);
+    netcdf.close(nc);
 end
-
 %==========
 if makebry
     % O2 boundary conditions
-    ncid = netcdf.open(grdname, 'NC_NOWRITE');
-    h = netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'h'));
-    netcdf.close(ncid);
-
-    ncid = netcdf.open(bryname, 'NC_NOWRITE');
-    theta_s = netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'theta_s'));
-    theta_b = netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'theta_b'));
-    Tcline = netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'Tcline'));
-    [~,N]=netcdf.inqDim(ncid, netcdf.inqDimID(ncid, 's_rho'));
-    vtransform=netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'Vtransform'));
-    if  ~exist('vtransform')
+    nc=netcdf.open(grdname,'NC_NOWRITE');
+    h = double(netcdf.getVar(nc,netcdf.inqVarID(nc,'h'))).';
+    netcdf.close(nc);
+    nc=netcdf.open(bryname,'NC_NOWRITE');
+    theta_s = double(netcdf.getVar(nc,netcdf.inqVarID(nc,'theta_s')));
+    theta_b = double(netcdf.getVar(nc,netcdf.inqVarID(nc,'theta_b')));
+    Tcline  = double(netcdf.getVar(nc,netcdf.inqVarID(nc,'Tcline')));
+    [~,N]=netcdf.inqDim(nc,netcdf.inqDimID(nc,'s_rho'));
+    try
+        vtransform=double(netcdf.getVar(nc,netcdf.inqVarID(nc,'Vtransform')));
+    catch
         vtransform=1; %Old Vtransform
         disp([' NO VTRANSFORM parameter found'])
         disp([' USE TRANSFORM default value vtransform = 1'])
     end
-    O2_bry_west = netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'O2_west'));
-    O2_bry_east = netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'O2_east'));
-    O2_bry_south = netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'O2_south'));
-    O2_bry_north = netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'O2_north'));
-    O2_time = netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'o2_time'));
-    O2_cycle = netcdf.getAtt(ncid, netcdf.inqVarID(ncid, 'o2_time'), 'cycle_length');
-    zeta_west  = netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'zeta_west'));
-    zeta_east  = netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'zeta_east'));
-    zeta_south = netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'zeta_south'));
-    zeta_north = netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'zeta_north'));
-    netcdf.close(ncid);
-
+    % (time,s_rho,eta|xi) variables -> Matlab order (T,N,npoints)
+    O2_bry_west  = permute(double(netcdf.getVar(nc,netcdf.inqVarID(nc,'O2_west'))),[3 2 1]);
+    O2_bry_east  = permute(double(netcdf.getVar(nc,netcdf.inqVarID(nc,'O2_east'))),[3 2 1]);
+    O2_bry_south = permute(double(netcdf.getVar(nc,netcdf.inqVarID(nc,'O2_south'))),[3 2 1]);
+    O2_bry_north = permute(double(netcdf.getVar(nc,netcdf.inqVarID(nc,'O2_north'))),[3 2 1]);
+    vid_o2t  = netcdf.inqVarID(nc,'o2_time');
+    O2_time  = double(netcdf.getVar(nc,vid_o2t));
+    O2_cycle = double(netcdf.getAtt(nc,vid_o2t,'cycle_length'));
+    % (time,eta|xi) -> (T,npoints)
+    zeta_west  = double(netcdf.getVar(nc,netcdf.inqVarID(nc,'zeta_west'))).';
+    zeta_east  = double(netcdf.getVar(nc,netcdf.inqVarID(nc,'zeta_east'))).';
+    zeta_south = double(netcdf.getVar(nc,netcdf.inqVarID(nc,'zeta_south'))).';
+    zeta_north = double(netcdf.getVar(nc,netcdf.inqVarID(nc,'zeta_north'))).';
+    netcdf.close(nc);
     % BRY
     [TT,KK,MM]=size(O2_bry_south); [TT,KK,LL]=size(O2_bry_west);
     type='w';
@@ -202,7 +207,6 @@ if makebry
     zw_bry_east  = zeros(TT,KK+1);
     zw_bry_south = zeros(TT,KK+1);
     zw_bry_north = zeros(TT,KK+1);
-
     N2O_bry_east  = zeros(TT,KK,LL); N2O_bry_east(:)=NaN  ;
     N2O_bry_west  = zeros(TT,KK,LL); N2O_bry_west(:)=NaN  ;
     N2O_bry_south = zeros(TT,KK,MM); N2O_bry_south(:)=NaN ;
@@ -249,7 +253,6 @@ if makebry
     end
     T= O2_time ;% time in days
     cycle=O2_cycle;
-
     %
     % add N20 in bryfile file
     %
@@ -258,65 +261,37 @@ if makebry
     %
     % open the bry file
     %
-    ncid = netcdf.open(bryname, 'NC_WRITE');
+    nc = netcdf.open(bryname,'NC_WRITE');
     % new variable
     %
-    %%redef(nc);
-    did_n2o_time = netcdf.defDim(ncid, 'n2o_time', length(T));
-    vid_n2o_time = netcdf.defVar(ncid, 'n2o_time', 'NC_DOUBLE', did_n2o_time);
-    % [conv] línea ncchar duplicada omitida
-    netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'n2o_time'), 'long_name', 'time climatological N2O');
-    oct_write_time_attributes(ncid,'n2o_time',O2_cycle,time_unit_att,time_second_unit_att,...
+    netcdf.reDef(nc);
+    did_t=oct_defdim(nc,'n2o_time',length(T));
+    vid_t=oct_defvar(nc,'n2o_time','double',did_t);
+    netcdf.putAtt(nc,vid_t,'long_name','time climatological N2O');
+    oct_write_time_attributes(nc,'n2o_time',O2_cycle,time_unit_att,time_second_unit_att,...
                         calendar_att,0,1);
-
-    vid_N2O_east = netcdf.defVar(ncid, 'N2O_east', 'NC_DOUBLE', [did_eta_rho, did_s_rho, did_n2o_time]);
-    % [conv] línea ncchar duplicada omitida
-    netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'N2O_east'), 'long_name', 'Nitrous oxide');
-    % [conv] línea ncchar duplicada omitida
-    netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'N2O_east'), 'units', 'mMol N2O m-3');
-    % [conv] línea ncchar duplicada omitida
-    netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'N2O_east'), 'fields', 'NO2, scalar, series');
-
-    vid_N2O_west = netcdf.defVar(ncid, 'N2O_west', 'NC_DOUBLE', [did_eta_rho, did_s_rho, did_n2o_time]);
-    % [conv] línea ncchar duplicada omitida
-    netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'N2O_west'), 'long_name', 'Nitrous oxide');
-    % [conv] línea ncchar duplicada omitida
-    netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'N2O_west'), 'units', 'mMol N2O m-3');
-    % [conv] línea ncchar duplicada omitida
-    netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'N2O_west'), 'fields', 'NO2, scalar, series');
-
-    vid_N2O_south = netcdf.defVar(ncid, 'N2O_south', 'NC_DOUBLE', [did_xi_rho, did_s_rho, did_n2o_time]);
-    % [conv] línea ncchar duplicada omitida
-    netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'N2O_south'), 'long_name', 'Nitrous oxide');
-    % [conv] línea ncchar duplicada omitida
-    netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'N2O_south'), 'units', 'mMol N2O m-3');
-    % [conv] línea ncchar duplicada omitida
-    netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'N2O_south'), 'fields', 'NO2, scalar, series');
-
-    vid_N2O_north = netcdf.defVar(ncid, 'N2O_north', 'NC_DOUBLE', [did_xi_rho, did_s_rho, did_n2o_time]);
-    % [conv] línea ncchar duplicada omitida
-    netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'N2O_north'), 'long_name', 'Nitrous oxide');
-    % [conv] línea ncchar duplicada omitida
-    netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'N2O_north'), 'units', 'mMol N2O m-3');
-    % [conv] línea ncchar duplicada omitida
-    netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'N2O_north'), 'fields', 'NO2, scalar, series');
-
+    did_s=netcdf.inqDimID(nc,'s_rho');
+    did_eta=netcdf.inqDimID(nc,'eta_rho');
+    did_xi=netcdf.inqDimID(nc,'xi_rho');
+    % (the Matlab version also sets units on misspelled 'N20_*' variables: skipped)
+    for bnd={'east','west','south','north'}
+      if any(strcmp(bnd{1},{'east','west'})), did_h=did_eta; else, did_h=did_xi; end
+      vid=oct_defvar(nc,['N2O_',bnd{1}],'double',[did_h did_s did_t]);
+      netcdf.putAtt(nc,vid,'long_name','Nitrous oxide');
+      netcdf.putAtt(nc,vid,'units','mMol N2O m-3');
+      netcdf.putAtt(nc,vid,'fields','NO2, scalar, series');
+    end
+    netcdf.endDef(nc);
     %
-    % write new variable
+    % write new variable : (T,N,npoints) -> Fortran [npoints N T]
     %
-    netcdf.putVar(ncid, netcdf.inqVarID(ncid, 'n2o_time'), T);
-    netcdf.putVar(ncid, netcdf.inqVarID(ncid, 'N2O_east'), :,:,:,:-1, 1, N2O_bry_east);  % [conv] 0-based
-    netcdf.putVar(ncid, netcdf.inqVarID(ncid, 'N2O_west'), :,:,:,:-1, 1, N2O_bry_west);  % [conv] 0-based
-    netcdf.putVar(ncid, netcdf.inqVarID(ncid, 'N2O_south'), :,:,:,:-1, 1, N2O_bry_south);  % [conv] 0-based
-    netcdf.putVar(ncid, netcdf.inqVarID(ncid, 'N2O_north'), :,:,:,:-1, 1, N2O_bry_north);  % [conv] 0-based
+    netcdf.putVar(nc,vid_t,0,length(T),T(:));
+    netcdf.putVar(nc,netcdf.inqVarID(nc,'N2O_east'),[0 0 0],[LL KK TT],permute(N2O_bry_east,[3 2 1]));
+    netcdf.putVar(nc,netcdf.inqVarID(nc,'N2O_west'),[0 0 0],[LL KK TT],permute(N2O_bry_west,[3 2 1]));
+    netcdf.putVar(nc,netcdf.inqVarID(nc,'N2O_south'),[0 0 0],[MM KK TT],permute(N2O_bry_south,[3 2 1]));
+    netcdf.putVar(nc,netcdf.inqVarID(nc,'N2O_north'),[0 0 0],[MM KK TT],permute(N2O_bry_north,[3 2 1]));
     %
     % Synchronize on disk
     %
-    netcdf.close(ncid);
+    netcdf.close(nc);
 end
-
-
-
-
-
-

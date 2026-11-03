@@ -73,13 +73,13 @@ if (makeoa)
   %
   % Create dimensions and variables (netcdf.defVar: dims in reversed order)
   %
-  did_t=netcdf.defDim(ncid,'fer_time',length(t));
-  vid_t=netcdf.defVar(ncid,'fer_time','double',did_t);
-  did_z=netcdf.defDim(ncid,'Zfer',length(zfer));
-  vid_z=netcdf.defVar(ncid,'Zfer','double',did_z);
+  did_t=oct_defdim(ncid,'fer_time',length(t));
+  vid_t=oct_defvar(ncid,'fer_time','double',did_t);
+  did_z=oct_defdim(ncid,'Zfer',length(zfer));
+  vid_z=oct_defvar(ncid,'Zfer','double',did_z);
   did_xi=netcdf.inqDimID(ncid,'xi_rho');
   did_eta=netcdf.inqDimID(ncid,'eta_rho');
-  vid_v=netcdf.defVar(ncid,'FER','double',[did_xi did_eta did_z did_t]);
+  vid_v=oct_defvar(ncid,'FER','double',[did_xi did_eta did_z did_t]);
   %
   % Create attributes
   %
@@ -109,12 +109,12 @@ if (makeclim)
   %
   ncid=netcdf.open(climfile,'NC_WRITE');
   netcdf.reDef(ncid);
-  did_t=netcdf.defDim(ncid,'fer_time',length(t));
-  vid_t=netcdf.defVar(ncid,'fer_time','double',did_t);
+  did_t=oct_defdim(ncid,'fer_time',length(t));
+  vid_t=oct_defvar(ncid,'fer_time','double',did_t);
   did_s=netcdf.inqDimID(ncid,'s_rho');
   did_xi=netcdf.inqDimID(ncid,'xi_rho');
   did_eta=netcdf.inqDimID(ncid,'eta_rho');
-  vid_v=netcdf.defVar(ncid,'FER','double',[did_xi did_eta did_s did_t]);
+  vid_v=oct_defvar(ncid,'FER','double',[did_xi did_eta did_s did_t]);
   %
   netcdf.putAtt(ncid,vid_t,'long_name','time for iron');
   oct_write_time_attributes(ncid,'fer_time',cycle,time_unit_att,time_second_unit_att,...

@@ -5,6 +5,7 @@ function n2o=oct_nevis_2003(zw,o2);
 %        Quantifying the nitrous oxide source from coastal upwelling,     
 %        Global Biogeochem. Cycles, 18, GB1018, doi:10.1029/2003GB002110.
 %==========================================================================
+%  Andres Sepulveda 2026 - Octave adaptations
 if ( zw <= -50)
     cff=16./170.*0.26/o2-0.0004*exp(zw./3000.);    %mmolN2O/mmolO2
     n2o=cff*o2;

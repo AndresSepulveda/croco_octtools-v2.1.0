@@ -1,7 +1,7 @@
 function oct_add_phyto(climfile);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-%  function oct_add_phyto(climfile);
+%  function add_phyto(climfile);
 %
 %  Add phytoplancton (mMol N m-3)  in a CROCO climatology file.
 %  take the chlorophyll (mg C) from the climatology file and
@@ -36,8 +36,12 @@ function oct_add_phyto(climfile);
 %
 %  Copyright (c) 2001-2006 by Pierrick Penven 
 %  e-mail:Pierrick.Penven@ird.fr  
+%  Updated    Oct-2026 : Octave version (octave-netcdf, netcdf.* API)
+%  Andres Sepulveda 2026 - Octave adaptations
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% options for write_time_attributes
 %
 % options for oct_write_time_attributes
 insecond = 0 ;
@@ -51,44 +55,54 @@ if ~exist('Yorig', 'var') ,  Yorig = [] ; , end
 [time_unit_att,time_second_unit_att,calendar_att]=...
                     oct_get_time_attributes(Yorig);
 %
-oct_theta=0.5;
+theta=0.5;
 %
 disp('Add_phyto: creating variable and attribute')
 %
 % open the clim file  
 % 
-ncid = netcdf.open(climfile, 'NC_WRITE');
-time= netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'chla_time'));
-cycle= netcdf.getAtt(ncid, netcdf.inqVarID(ncid, 'chla_time'), 'cycle_length');
+ncid=netcdf.open(climfile,'NC_WRITE');
+vid=netcdf.inqVarID(ncid,'chla_time');
+time=double(netcdf.getVar(ncid,vid));
+time=time(:);
+cycle=double(netcdf.getAtt(ncid,vid,'cycle_length'));
 tlen=length(time);
-%%redef(nc);
-did_phyto_time = netcdf.defDim(ncid, 'phyto_time', tlen);
-vid_phyto_time = netcdf.defVar(ncid, 'phyto_time', 'NC_DOUBLE', did_phyto_time);
-vid_PHYTO = netcdf.defVar(ncid, 'PHYTO', 'NC_DOUBLE', [did_xi_rho, did_eta_rho, did_s_rho, did_phyto_time]);
+[~,N]=netcdf.inqDim(ncid,netcdf.inqDimID(ncid,'s_rho'));
+[~,Mp]=netcdf.inqDim(ncid,netcdf.inqDimID(ncid,'eta_rho'));
+[~,Lp]=netcdf.inqDim(ncid,netcdf.inqDimID(ncid,'xi_rho'));
+did_s=netcdf.inqDimID(ncid,'s_rho');
+did_eta=netcdf.inqDimID(ncid,'eta_rho');
+did_xi=netcdf.inqDimID(ncid,'xi_rho');
 %
-% [conv] línea ncchar duplicada omitida
-netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'phyto_time'), 'long_name', 'time for phytoplankton');
+netcdf.reDef(ncid);
+%
+did_t=oct_defdim(ncid,'phyto_time',tlen);
+vid_t=oct_defvar(ncid,'phyto_time','double',did_t);
+vid_v=oct_defvar(ncid,'PHYTO','double',[did_xi did_eta did_s did_t]);
+%
+netcdf.putAtt(ncid,vid_t,'long_name','time for phytoplankton');
 oct_write_time_attributes(ncid,'phyto_time',cycle,time_unit_att,time_second_unit_att,...
   calendar_att,insecond,add_cycle);
 %
-% [conv] línea ncchar duplicada omitida
-netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'PHYTO'), 'long_name', 'Phytoplankton');
-% [conv] línea ncchar duplicada omitida
-netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'PHYTO'), 'units', 'mMol N m-3');
-% [conv] línea ncchar duplicada omitida
-netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'PHYTO'), 'fields', 'PHYTO, scalar, series');
+vid_v=netcdf.inqVarID(ncid,'PHYTO');
+netcdf.putAtt(ncid,vid_v,'long_name','Phytoplankton');
+netcdf.putAtt(ncid,vid_v,'units','mMol N m-3');
+netcdf.putAtt(ncid,vid_v,'fields','PHYTO, scalar, series');
 %
-%%endef(nc);
+netcdf.endDef(ncid);
 %
 % record the time
 %
-netcdf.putVar(ncid, netcdf.inqVarID(ncid, 'phyto_time'), time);
+netcdf.putVar(ncid,netcdf.inqVarID(ncid,'phyto_time'),0,tlen,time);
 %
 % loop on time
 %
+vid_chla=netcdf.inqVarID(ncid,'CHLA');
 for l=1:tlen
   disp(['time index: ',num2str(l),' of total: ',num2str(tlen)])
-  netcdf.putVar(ncid, netcdf.inqVarID(ncid, 'PHYTO'), l,:,:,:-1, 1, oct_theta*squeeze(netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'CHLA'))));  % [conv] 0-based
+  % CHLA(l,:,:,:) in Fortran order [xi eta s time] (no permutation needed: copy)
+  chla=double(netcdf.getVar(ncid,vid_chla,[0 0 0 l-1],[Lp Mp N 1]));
+  netcdf.putVar(ncid,netcdf.inqVarID(ncid,'PHYTO'),[0 0 0 l-1],[Lp Mp N 1],theta*chla);
 end
 netcdf.close(ncid);
 return

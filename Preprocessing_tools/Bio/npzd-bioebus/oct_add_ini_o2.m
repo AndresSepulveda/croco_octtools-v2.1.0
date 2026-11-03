@@ -1,7 +1,7 @@
 function oct_add_ini_o2(ininame,grdname,oaname,cycle,O2min);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-%  function [longrd,latgrd,o2]=oct_add_ini_o2(ininame,grdname,...
+%  function [longrd,latgrd,o2]=add_ini_o2(ininame,grdname,...
 %                                           month_datafile,ann_datafile,...
 %                                           cycle);
 %
@@ -48,44 +48,56 @@ function oct_add_ini_o2(ininame,grdname,oaname,cycle,O2min);
 %
 %  Copyright (c) 2001-2006 by Pierrick Penven 
 %  e-mail:Pierrick.Penven@ird.fr  
+%  Updated    Oct-2026 : Octave version (octave-netcdf, netcdf.* API)
+%  Andres Sepulveda 2026 - Octave adaptations
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
 %
 disp('Add_ini_o2: creating variable and attribute')
 %
 % open the grid file  
 % 
-ncid = netcdf.open(grdname, 'NC_NOWRITE');
-h=netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'h'));
+ncid=netcdf.open(grdname,'NC_NOWRITE');
+h=double(netcdf.getVar(ncid,netcdf.inqVarID(ncid,'h'))).';
 netcdf.close(ncid);
+[M,L]=size(h);
 %
 % open the initial file  
-%
-ncid = netcdf.open(ininame, 'NC_WRITE');
-theta_s = netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'theta_s'));
-if isempty(theta_s)
-    disp('Restart file')
-    theta_s=ncid.theta_s(:);
-    theta_b=ncid.theta_b(:);
-    hc=ncid.hc(:);
-else
-    theta_b =  netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'theta_b'));
-    hc  =  netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'hc'));
-    vtransform = netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'Vtransform'));
-    if  ~exist('vtransform')
-        vtransform=1; %Old Vtransform
-        disp([' NO VTRANSFORM parameter found'])
-        disp([' USE TRANSFORM default value vtransform = 1'])
-    end
+% 
+ncid=netcdf.open(ininame,'NC_WRITE');
+try
+  theta_s = double(netcdf.getVar(ncid,netcdf.inqVarID(ncid,'theta_s')));
+catch
+  theta_s = [];
 end
-[~,N]=netcdf.inqDim(ncid, netcdf.inqDimID(ncid, 's_rho'));
+if isempty(theta_s)
+  disp('Restart file')
+  gid=netcdf.getConstant('NC_GLOBAL');
+  theta_s=double(netcdf.getAtt(ncid,gid,'theta_s'));
+  theta_b=double(netcdf.getAtt(ncid,gid,'theta_b'));
+  hc=double(netcdf.getAtt(ncid,gid,'hc'));
+else
+  theta_b = double(netcdf.getVar(ncid,netcdf.inqVarID(ncid,'theta_b')));
+  hc      = double(netcdf.getVar(ncid,netcdf.inqVarID(ncid,'hc')));
+  try
+    vtransform = double(netcdf.getVar(ncid,netcdf.inqVarID(ncid,'Vtransform')));
+  catch
+    vtransform=1; %Old Vtransform
+    disp([' NO VTRANSFORM parameter found'])
+    disp([' USE TRANSFORM default value vtransform = 1'])
+  end
+end
+[~,N]=netcdf.inqDim(ncid,netcdf.inqDimID(ncid,'s_rho'));
 %
 % open the oa file  
 % 
-noa_id = netcdf.open(oaname, 'NC_NOWRITE');
-z=-netcdf.getVar(noa_id, netcdf.inqVarID(noa_id, 'Zo2'));
-oatime=netcdf.getVar(noa_id, netcdf.inqVarID(noa_id, 'o2_time'));
+noa=netcdf.open(oaname,'NC_NOWRITE');
+z=-double(netcdf.getVar(noa,netcdf.inqVarID(noa,'Zo2')));
+oatime=double(netcdf.getVar(noa,netcdf.inqVarID(noa,'o2_time')));
+z=z(:); oatime=oatime(:);
 tlen=length(oatime);
+NZoa=length(z);
 %
 % Get the sigma depths
 %
@@ -110,18 +122,19 @@ z=z(1:Nz);
 %
 % read in the initial file  
 % 
-scrum_time = netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'scrum_time'));
-scrum_time = scrum_time / (24*3600);
+scrum_time = double(netcdf.getVar(ncid,netcdf.inqVarID(ncid,'scrum_time')));
+scrum_time = scrum_time(:) / (24*3600);
 tinilen = length(scrum_time);
-%redef(nc);
-vid_O2 = netcdf.defVar(ncid, 'O2', 'NC_DOUBLE', [did_xi_rho, did_eta_rho, did_s_rho, did_time]);
-% [conv] línea ncchar duplicada omitida
-netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'O2'), 'long_name', 'Oxygen');
-% [conv] línea ncchar duplicada omitida
-netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'O2'), 'units', 'mMol O m-3');
-% [conv] línea ncchar duplicada omitida
-netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'O2'), 'fields', 'O2, scalar, series');
-%endef(nc);
+netcdf.reDef(ncid);
+vid_v=oct_defvar(ncid,'O2','double',...
+      [netcdf.inqDimID(ncid,'xi_rho') netcdf.inqDimID(ncid,'eta_rho') ...
+       netcdf.inqDimID(ncid,'s_rho') netcdf.inqDimID(ncid,'time')]);
+netcdf.putAtt(ncid,vid_v,'long_name','Oxygen');
+netcdf.putAtt(ncid,vid_v,'units','mMol O m-3');
+netcdf.putAtt(ncid,vid_v,'fields','O2, scalar, series');
+netcdf.endDef(ncid);
+vid_oa=netcdf.inqVarID(noa,'O2');
+vid_zeta=netcdf.inqVarID(ncid,'zeta');
 %
 %  loop on initial time
 %
@@ -172,15 +185,15 @@ for l=1:tinilen
 % interpole the monthly dataset on the horizontal croco grid
 %
   disp(['Add_ini_o2: vertical interpolation'])
-  var=squeeze(netcdf.getVar(noa_id, netcdf.inqVarID(noa_id, 'O2')));
-  
+  % noa{'O2'}(l1,:,:,:) -> (Z,eta,xi)
+  var=permute(double(netcdf.getVar(noa,vid_oa,[0 0 0 l1-1],[L M NZoa 1])),[3 2 1]);
   if addsurf
     var=cat(1,var(1,:,:),var);
   end
   if addbot
     var=cat(1,var,var(end,:,:));
   end
-  var2=squeeze(netcdf.getVar(noa_id, netcdf.inqVarID(noa_id, 'O2')));
+  var2=permute(double(netcdf.getVar(noa,vid_oa,[0 0 0 l2-1],[L M NZoa 1])),[3 2 1]);
   if addsurf
     var2=cat(1,var2(1,:,:),var2);
   end
@@ -188,18 +201,21 @@ for l=1:tinilen
     var2=cat(1,var2,var2(end,:,:));
   end
   var=cff1*var + cff2*var2;
-  zeta = squeeze(netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'zeta')));
+  var=var(1:Nz,:,:);   % keep the levels consistent with z(1:Nz) (needed by oct_ztosigma)
+  zeta = double(netcdf.getVar(ncid,vid_zeta,[0 0 l-1],[L M 1])).';
   zcroco=oct_zlevs(h,zeta,theta_s,theta_b,hc,N,'r',vtransform);
-  netcdf.putVar(ncid, netcdf.inqVarID(ncid, 'O2'), l,:,:,:-1, 1, oct_ztosigma(flip(var,1),zcroco,flipud(z)));  % [conv] 0-based
+  % nc{'O2'}(l,:,:,:)=... (N,M,L) -> Fortran [L M N 1]
+  netcdf.putVar(ncid,vid_v,[0 0 0 l-1],[L M N 1],...
+                permute(oct_ztosigma(flip(var,1),zcroco,flipud(z)),[3 2 1]));
 end
-netcdf.close(noa_id);
+netcdf.close(noa);
 %
 % Remove low values for oligotrophic areas
 %
 for l=1:tinilen
-  O2=netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'O2'));
+  O2=double(netcdf.getVar(ncid,vid_v,[0 0 0 l-1],[L M N 1]));
   O2(O2<O2min)=O2min;
-  netcdf.putVar(ncid, netcdf.inqVarID(ncid, 'O2'), l,:,:,:-1, 1, O2);  % [conv] 0-based
+  netcdf.putVar(ncid,vid_v,[0 0 0 l-1],[L M N 1],O2);
 end
 netcdf.close(ncid);
 return

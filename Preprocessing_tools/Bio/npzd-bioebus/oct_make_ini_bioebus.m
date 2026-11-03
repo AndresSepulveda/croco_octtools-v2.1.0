@@ -22,6 +22,8 @@
 %  Patricio Marchesiello, IRD 2007
 %  Christophe Eugene Raoul Menkes, IRD 2013
 %  Elodie Gutknecht, 2013
+%  Updated    Oct-2026 : Octave version (octave-netcdf, netcdf.* API)
+%  Andres Sepulveda 2026 - Octave adaptations
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 clear all
@@ -83,16 +85,24 @@ oct_add_ini_Szoo_Lzoo(ininame);
 %
 % Remove low values for oligotrophic areas
 %
-ncid = netcdf.open(ininame, 'NC_WRITE');
-NO3=netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'NO3'));
+ncid=netcdf.open(ininame,'NC_WRITE');
+vid=netcdf.inqVarID(ncid,'NO3');
+NO3=double(netcdf.getVar(ncid,vid));   % elementwise: Fortran order kept
 NO3(NO3<NO3min)=NO3min;
-netcdf.putVar(ncid, netcdf.inqVarID(ncid, 'NO3'), :,:,:,:-1, 1, NO3);  % [conv] 0-based
+[~,~,dimids]=netcdf.inqVar(ncid,vid);
+cnt=zeros(1,length(dimids));
+for d=1:length(dimids), [~,cnt(d)]=netcdf.inqDim(ncid,dimids(d)); end
+netcdf.putVar(ncid,vid,zeros(1,length(cnt)),cnt,NO3);
 netcdf.close(ncid);
 
-ncid = netcdf.open(ininame, 'NC_WRITE');
-O2=netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'O2'));
+ncid=netcdf.open(ininame,'NC_WRITE');
+vid=netcdf.inqVarID(ncid,'O2');
+O2=double(netcdf.getVar(ncid,vid));   % elementwise: Fortran order kept
 O2(O2<O2min)=O2min;
-netcdf.putVar(ncid, netcdf.inqVarID(ncid, 'O2'), :,:,:,:-1, 1, O2);  % [conv] 0-based
+[~,~,dimids]=netcdf.inqVar(ncid,vid);
+cnt=zeros(1,length(dimids));
+for d=1:length(dimids), [~,cnt(d)]=netcdf.inqDim(ncid,dimids(d)); end
+netcdf.putVar(ncid,vid,zeros(1,length(cnt)),cnt,O2);
 netcdf.close(ncid);
 %
 

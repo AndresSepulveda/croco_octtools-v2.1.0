@@ -1,7 +1,7 @@
 function oct_add_ini_no3(ininame,grdname,oaname,cycle,NO3min);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-%  function [longrd,latgrd,no3]=oct_add_ini_no3(ininame,grdname,...
+%  function [longrd,latgrd,no3]=add_ini_no3(ininame,grdname,...
 %                                           seas_datafile,ann_datafile,...
 %                                           cycle);
 %
@@ -48,44 +48,56 @@ function oct_add_ini_no3(ininame,grdname,oaname,cycle,NO3min);
 %
 %  Copyright (c) 2001-2006 by Pierrick Penven 
 %  e-mail:Pierrick.Penven@ird.fr  
+%  Updated    Oct-2026 : Octave version (octave-netcdf, netcdf.* API)
+%  Andres Sepulveda 2026 - Octave adaptations
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
 %
 disp('Add_ini_no3: creating variable and attribute')
 %
 % open the grid file  
 % 
-ncid = netcdf.open(grdname, 'NC_NOWRITE');
-h=netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'h'));
+ncid=netcdf.open(grdname,'NC_NOWRITE');
+h=double(netcdf.getVar(ncid,netcdf.inqVarID(ncid,'h'))).';
 netcdf.close(ncid);
+[M,L]=size(h);
 %
 % open the initial file  
 % 
-ncid = netcdf.open(ininame, 'NC_WRITE');
-theta_s = netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'theta_s'));
+ncid=netcdf.open(ininame,'NC_WRITE');
+try
+  theta_s = double(netcdf.getVar(ncid,netcdf.inqVarID(ncid,'theta_s')));
+catch
+  theta_s = [];
+end
 if isempty(theta_s)
   disp('Restart file')
-  theta_s=ncid.theta_s(:);
-  theta_b=ncid.theta_b(:);
-  hc=ncid.hc(:);
+  gid=netcdf.getConstant('NC_GLOBAL');
+  theta_s=double(netcdf.getAtt(ncid,gid,'theta_s'));
+  theta_b=double(netcdf.getAtt(ncid,gid,'theta_b'));
+  hc=double(netcdf.getAtt(ncid,gid,'hc'));
 else
-  theta_b =  netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'theta_b'));
-  hc  =  netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'hc'));
-  vtransform = netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'Vtransform'));
-  if  ~exist('vtransform')
+  theta_b = double(netcdf.getVar(ncid,netcdf.inqVarID(ncid,'theta_b')));
+  hc      = double(netcdf.getVar(ncid,netcdf.inqVarID(ncid,'hc')));
+  try
+    vtransform = double(netcdf.getVar(ncid,netcdf.inqVarID(ncid,'Vtransform')));
+  catch
     vtransform=1; %Old Vtransform
     disp([' NO VTRANSFORM parameter found'])
     disp([' USE TRANSFORM default value vtransform = 1'])
   end
 end
-[~,N]=netcdf.inqDim(ncid, netcdf.inqDimID(ncid, 's_rho'));
+[~,N]=netcdf.inqDim(ncid,netcdf.inqDimID(ncid,'s_rho'));
 %
 % open the oa file  
 % 
-noa_id = netcdf.open(oaname, 'NC_NOWRITE');
-z=-netcdf.getVar(noa_id, netcdf.inqVarID(noa_id, 'Zno3'));
-oatime=netcdf.getVar(noa_id, netcdf.inqVarID(noa_id, 'no3_time'));
+noa=netcdf.open(oaname,'NC_NOWRITE');
+z=-double(netcdf.getVar(noa,netcdf.inqVarID(noa,'Zno3')));
+oatime=double(netcdf.getVar(noa,netcdf.inqVarID(noa,'no3_time')));
+z=z(:); oatime=oatime(:);
 tlen=length(oatime);
+NZoa=length(z);
 %
 % Get the sigma depths
 %
@@ -110,18 +122,19 @@ z=z(1:Nz);
 %
 % read in the initial file  
 % 
-scrum_time = netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'scrum_time'));
-scrum_time = scrum_time / (24*3600);
+scrum_time = double(netcdf.getVar(ncid,netcdf.inqVarID(ncid,'scrum_time')));
+scrum_time = scrum_time(:) / (24*3600);
 tinilen = length(scrum_time);
-%redef(nc);
-vid_NO3 = netcdf.defVar(ncid, 'NO3', 'NC_DOUBLE', [did_xi_rho, did_eta_rho, did_s_rho, did_time]);
-% [conv] línea ncchar duplicada omitida
-netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'NO3'), 'long_name', 'Nitrate');
-% [conv] línea ncchar duplicada omitida
-netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'NO3'), 'units', 'mMol N m-3');
-% [conv] línea ncchar duplicada omitida
-netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'NO3'), 'fields', 'NO3, scalar, series');
-%endef(nc);
+netcdf.reDef(ncid);
+vid_v=oct_defvar(ncid,'NO3','double',...
+      [netcdf.inqDimID(ncid,'xi_rho') netcdf.inqDimID(ncid,'eta_rho') ...
+       netcdf.inqDimID(ncid,'s_rho') netcdf.inqDimID(ncid,'time')]);
+netcdf.putAtt(ncid,vid_v,'long_name','Nitrate');
+netcdf.putAtt(ncid,vid_v,'units','mMol N m-3');
+netcdf.putAtt(ncid,vid_v,'fields','NO3, scalar, series');
+netcdf.endDef(ncid);
+vid_oa=netcdf.inqVarID(noa,'NO3');
+vid_zeta=netcdf.inqVarID(ncid,'zeta');
 %
 %  loop on initial time
 %
@@ -172,14 +185,15 @@ for l=1:tinilen
 % interpole the seasonal dataset on the horizontal croco grid
 %
   disp(['Add_ini_no3: vertical interpolation'])
-  var=squeeze(netcdf.getVar(noa_id, netcdf.inqVarID(noa_id, 'NO3')));
+  % noa{'NO3'}(l1,:,:,:) -> (Z,eta,xi)
+  var=permute(double(netcdf.getVar(noa,vid_oa,[0 0 0 l1-1],[L M NZoa 1])),[3 2 1]);
   if addsurf
     var=cat(1,var(1,:,:),var);
   end
   if addbot
     var=cat(1,var,var(end,:,:));
   end
-  var2=squeeze(netcdf.getVar(noa_id, netcdf.inqVarID(noa_id, 'NO3')));
+  var2=permute(double(netcdf.getVar(noa,vid_oa,[0 0 0 l2-1],[L M NZoa 1])),[3 2 1]);
   if addsurf
     var2=cat(1,var2(1,:,:),var2);
   end
@@ -187,18 +201,21 @@ for l=1:tinilen
     var2=cat(1,var2,var2(end,:,:));
   end
   var=cff1*var + cff2*var2;
-  zeta = squeeze(netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'zeta')));
+  var=var(1:Nz,:,:);   % keep the levels consistent with z(1:Nz) (needed by oct_ztosigma)
+  zeta = double(netcdf.getVar(ncid,vid_zeta,[0 0 l-1],[L M 1])).';
   zcroco=oct_zlevs(h,zeta,theta_s,theta_b,hc,N,'r',vtransform);
-  netcdf.putVar(ncid, netcdf.inqVarID(ncid, 'NO3'), l,:,:,:-1, 1, oct_ztosigma(flip(var,1),zcroco,flipud(z)));  % [conv] 0-based
+  % nc{'NO3'}(l,:,:,:)=... (N,M,L) -> Fortran [L M N 1]
+  netcdf.putVar(ncid,vid_v,[0 0 0 l-1],[L M N 1],...
+                permute(oct_ztosigma(flip(var,1),zcroco,flipud(z)),[3 2 1]));
 end
-netcdf.close(noa_id);
+netcdf.close(noa);
 %
 % Remove low values for oligotrophic areas
 %
 for l=1:tinilen
-  NO3=netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'NO3'));
+  NO3=double(netcdf.getVar(ncid,vid_v,[0 0 0 l-1],[L M N 1]));
   NO3(NO3<NO3min)=0;
-  netcdf.putVar(ncid, netcdf.inqVarID(ncid, 'NO3'), l,:,:,:-1, 1, NO3);  % [conv] 0-based
+  netcdf.putVar(ncid,vid_v,[0 0 0 l-1],[L M N 1],NO3);
 end
 netcdf.close(ncid);
 return

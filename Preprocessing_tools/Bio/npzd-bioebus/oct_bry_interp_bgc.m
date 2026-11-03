@@ -2,7 +2,7 @@ function oct_bry_interp_bgc(zbryname,lon,lat,seas_datafile,ann_datafile,...
                     dataname,vname,obcndx,Roa);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % 
-%  function oct_bry_interp(zbryname,lon,lat,seas_datafile,ann_datafile,...
+%  function bry_interp(zbryname,lon,lat,seas_datafile,ann_datafile,...
 %                      dataname,vname,obcndx,Roa);
 % 
 %  Interpole data for the lateral boundaries (bry_file) along 
@@ -32,6 +32,8 @@ function oct_bry_interp_bgc(zbryname,lon,lat,seas_datafile,ann_datafile,...
 %  e-mail:Pierrick.Penven@ird.fr  
 %
 %  Updated    5-Oct-2006 by Pierrick Penven (test for negative salinity)
+%  Updated    Oct-2026 : Octave version (octave-netcdf, netcdf.* API)
+%  Andres Sepulveda 2026 - Octave adaptations
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 [M,L]=size(lon);
@@ -42,11 +44,12 @@ default=NaN;
 %
 % Read in the datafile
 %
-ncidseas = netcdf.open(seas_datafile, 'NC_NOWRITE');
-X=netcdf.getVar(ncidseas, netcdf.inqVarID(ncidseas, 'X'));
-Y=netcdf.getVar(ncidseas, netcdf.inqVarID(ncidseas, 'Y'));
-Zseas=-netcdf.getVar(ncidseas, netcdf.inqVarID(ncidseas, 'Z'));
-T=netcdf.getVar(ncidseas, netcdf.inqVarID(ncidseas, 'T'));
+ncidseas=netcdf.open(seas_datafile,'NC_NOWRITE');
+X=double(netcdf.getVar(ncidseas,netcdf.inqVarID(ncidseas,'X')));
+Y=double(netcdf.getVar(ncidseas,netcdf.inqVarID(ncidseas,'Y')));
+Zseas=-double(netcdf.getVar(ncidseas,netcdf.inqVarID(ncidseas,'Z')));
+T=double(netcdf.getVar(ncidseas,netcdf.inqVarID(ncidseas,'T')));
+X=X(:); Y=Y(:); Zseas=Zseas(:); T=T(:);
 tlen=length(T);
 Nzseas=length(Zseas);
 %
@@ -55,25 +58,25 @@ Nzseas=length(Zseas);
 if obcndx==1
 %
 % Southern boundary
-% 
+%
   icroco=(1:L);
   jcroco=1;
 elseif obcndx==2
 %
 % Eastern boundary
-% 
+%
   icroco=L;
   jcroco=(1:M);
 elseif obcndx==3
 %
 % Northern boundary
-% 
+%
   icroco=(1:L);
   jcroco=M;
 elseif obcndx==4
 %
 % Western boundary
-% 
+%
   icroco=1;
   jcroco=(1:M);
 end
@@ -95,11 +98,13 @@ i2=find(X>=lonmin & X<=lonmax);
 i3=find(X+360>=lonmin & X+360<=lonmax);
 x=cat(1,X(i1)-360,X(i2),X(i3)+360);
 y=Y(j);
+ilist={i1,i2,i3};
 %
 % Open the Z-boundary file
 %
-ncid = netcdf.open(zbryname, 'NC_WRITE');
-Z=-netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'Z'));
+ncid=netcdf.open(zbryname,'NC_WRITE');
+Z=-double(netcdf.getVar(ncid,netcdf.inqVarID(ncid,'Z')));
+Z=Z(:);
 Nz=length(Z);
 %
 % Check the time
@@ -111,11 +116,12 @@ Nz=length(Z);
 %          '  t = ',num2str(T)])
 % end
 %
-% Read the annual dataset
+% Read the annual dataset if Nz > Nzseas
 %
 if Nz > Nzseas
-  ncidann = netcdf.open(ann_datafile, 'NC_NOWRITE');
-  zann=-netcdf.getVar(ncidann, netcdf.inqVarID(ncidann, 'Z'));
+  ncidann=netcdf.open(ann_datafile,'NC_NOWRITE');
+  zann=-double(netcdf.getVar(ncidann,netcdf.inqVarID(ncidann,'Z')));
+  zann=zann(1:Nz);
   if (Z~=zann)
     error('Vertical levels mismatch')
   end
@@ -123,30 +129,29 @@ if Nz > Nzseas
 % Interpole the annual dataset on the horizontal CROCO grid
 %
   disp(' Ext tracers: horizontal interpolation of the annual data')
-  if Zseas~=zann(1:length(Zseas)) 
+  if Zseas~=zann(1:length(Zseas))
     error('vertical levels dont match')
   end
-  dims=size(lon);
   datazgrid=zeros(Nz,length(lon));
-  missval=netcdf.getAtt(ncidann, netcdf.inqVarID(ncidann, dataname), 'missing_value');
+  vid_ann=netcdf.inqVarID(ncidann,dataname);
+  % annual data: (Z,Y,X) or (T,Z,Y,X) with T=1 -> start/count in Fortran order
+  [~,~,dids_ann]=netcdf.inqVar(ncidann,vid_ann);
+  nd_ann=length(dids_ann);
+  missval=double(netcdf.getAtt(ncidann,vid_ann,'missing_value'));
   for k=Nzseas+1:Nz
-    if ~isempty(i2)
-      data=squeeze(netcdf.getVar(ncidann, netcdf.inqVarID(ncidann, dataname)));
-    else
-      data=[];
-    end
-    if ~isempty(i1)
-      data=cat(2,squeeze(netcdf.getVar(ncidann, netcdf.inqVarID(ncidann, dataname))),data);
-    end
-    if ~isempty(i3)
-      data=cat(2,data,squeeze(netcdf.getVar(ncidann, netcdf.inqVarID(ncidann, dataname))));
+    data=[];
+    for n=[2 1 3]   % same order as the Matlab cat: i1 before, i3 after i2
+      ii=ilist{n};
+      if ~isempty(ii)
+        tmp=double(netcdf.getVar(ncidann,vid_ann,...
+                   [ii(1)-1 j(1)-1 k-1 zeros(1,nd_ann-3)],...
+                   [length(ii) length(j) 1 ones(1,nd_ann-3)])).';
+        if n==1, data=cat(2,tmp,data); else, data=cat(2,data,tmp); end
+      end
     end
     data=oct_get_missing_val(x,y,data,missval,Roa,default);
-    if dims(1)==1
-      datazgrid(k,:)=interp2(x,y,data,lon,lat,'cubic');
-    else
-      datazgrid(k,:)=(interp2(x,y,data,lon,lat,'cubic'))';    
-    end
+    tmp=interp2(x,y,data,lon,lat,'cubic');
+    datazgrid(k,:)=tmp(:).';
   end
   netcdf.close(ncidann);
 end
@@ -157,32 +162,28 @@ disp([' Ext tracers: horizontal interpolation of the seasonal data'])
 %
 % loop on time
 %
-missval=netcdf.getAtt(ncidseas, netcdf.inqVarID(ncidseas, dataname), 'missing_value');
-dims=size(lon);
+vid_seas=netcdf.inqVarID(ncidseas,dataname);
+missval=double(netcdf.getAtt(ncidseas,vid_seas,'missing_value'));
+vid_out=netcdf.inqVarID(ncid,vname);
 for l=1:tlen
-%for l=1:1
   disp(['time index: ',num2str(l),' of total: ',num2str(tlen)])
   if Nz <= Nzseas
     datazgrid=zeros(Nz,length(lon));
   end
   for k=1:min([Nz Nzseas])
-    if ~isempty(i2)
-      data=squeeze(netcdf.getVar(ncidseas, netcdf.inqVarID(ncidseas, dataname)));
-    else
-      data=[];
-    end
-    if ~isempty(i1)
-      data=cat(2,squeeze(netcdf.getVar(ncidseas, netcdf.inqVarID(ncidseas, dataname))),data);
-    end
-    if ~isempty(i3)
-      data=cat(2,data,squeeze(netcdf.getVar(ncidseas, netcdf.inqVarID(ncidseas, dataname))));
+    data=[];
+    for n=[2 1 3]
+      ii=ilist{n};
+      if ~isempty(ii)
+        % ncseas{dataname}(l,k,j,ii) -> start/count [X Y Z T] 0-based
+        tmp=double(netcdf.getVar(ncidseas,vid_seas,...
+                   [ii(1)-1 j(1)-1 k-1 l-1],[length(ii) length(j) 1 1])).';
+        if n==1, data=cat(2,tmp,data); else, data=cat(2,data,tmp); end
+      end
     end
     data=oct_get_missing_val(x,y,data,missval,Roa,default);
-    if dims(1)==1
-      datazgrid(k,:)=interp2(x,y,data,lon,lat,'cubic');
-    else
-      datazgrid(k,:)=(interp2(x,y,data,lon,lat,'cubic'))';    
-    end
+    tmp=interp2(x,y,data,lon,lat,'cubic');
+    datazgrid(k,:)=tmp(:).';
   end
 %
 % Test for salinity (no negative salinity !)
@@ -192,10 +193,9 @@ for l=1:tlen
     disp('salinity test')
     datazgrid(datazgrid<2)=2;
   end
-%
-  netcdf.putVar(ncid, netcdf.inqVarID(ncid, vname), l,:,:,:-1, 1, datazgrid);  % [conv] 0-based
+  % nc{vname}(l,:,:)=datazgrid : variable (time,Z,xi|eta) -> Fortran [xi|eta Z time]
+  netcdf.putVar(ncid,vid_out,[0 0 l-1],[size(datazgrid,2) Nz 1],datazgrid.');
 end
 netcdf.close(ncid);
 netcdf.close(ncidseas);
 return
-

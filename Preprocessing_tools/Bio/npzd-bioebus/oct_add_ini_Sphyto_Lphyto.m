@@ -1,7 +1,7 @@
 function oct_add_ini_Sphyto_Lphyto(inifile);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-%  function oct_add_ini_phyto(inifile);
+%  function add_ini_phyto(inifile);
 %
 %  Add phytoplancton (mMol N m-3)  in a CROCO initial file.
 %  take the chlorophyll (mg C) from the initial file and
@@ -36,8 +36,11 @@ function oct_add_ini_Sphyto_Lphyto(inifile);
 %
 %  Copyright (c) 2001-2006 by Pierrick Penven 
 %  e-mail:Pierrick.Penven@ird.fr  
+%  Updated    Oct-2026 : Octave version (octave-netcdf, netcdf.* API)
+%  Andres Sepulveda 2026 - Octave adaptations
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
 %
 theta1=0.1;
 theta2=0.4;
@@ -46,37 +49,38 @@ disp('Add_ini_Sphyto_Lphyto: creating variable and attribute')
 %
 % open the initial file  
 % 
-ncid = netcdf.open(inifile, 'NC_WRITE');
-time= netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'scrum_time'));
+ncid=netcdf.open(inifile,'NC_WRITE');
+time=double(netcdf.getVar(ncid,netcdf.inqVarID(ncid,'scrum_time')));
 tlen=length(time);
+[~,N]=netcdf.inqDim(ncid,netcdf.inqDimID(ncid,'s_rho'));
+[~,Mp]=netcdf.inqDim(ncid,netcdf.inqDimID(ncid,'eta_rho'));
+[~,Lp]=netcdf.inqDim(ncid,netcdf.inqDimID(ncid,'xi_rho'));
+dims4 = [netcdf.inqDimID(ncid,'xi_rho') netcdf.inqDimID(ncid,'eta_rho') ...
+         netcdf.inqDimID(ncid,'s_rho') netcdf.inqDimID(ncid,'time')];
 %
-%redef(nc);
+netcdf.reDef(ncid);
 %
-vid_SPHYTO = netcdf.defVar(ncid, 'SPHYTO', 'NC_DOUBLE', [did_xi_rho, did_eta_rho, did_s_rho, did_time]);
-% [conv] línea ncchar duplicada omitida
-netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'SPHYTO'), 'long_name', 'Small Phytoplankton');
-% [conv] línea ncchar duplicada omitida
-netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'SPHYTO'), 'units', 'mMol N m-3');
-% [conv] línea ncchar duplicada omitida
-netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'SPHYTO'), 'fields', 'SPHYTO, scalar, series');
+vid=oct_defvar(ncid,'SPHYTO','double',dims4);
+netcdf.putAtt(ncid,vid,'long_name','Small Phytoplankton');
+netcdf.putAtt(ncid,vid,'units','mMol N m-3');
+netcdf.putAtt(ncid,vid,'fields','SPHYTO, scalar, series');
 %
-vid_LPHYTO = netcdf.defVar(ncid, 'LPHYTO', 'NC_DOUBLE', [did_xi_rho, did_eta_rho, did_s_rho, did_time]);
-% [conv] línea ncchar duplicada omitida
-netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'LPHYTO'), 'long_name', 'Large Phytoplankton');
-% [conv] línea ncchar duplicada omitida
-netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'LPHYTO'), 'units', 'mMol N m-3');
-% [conv] línea ncchar duplicada omitida
-netcdf.putAtt(ncid, netcdf.inqVarID(ncid, 'LPHYTO'), 'fields', 'LPHYTO, scalar, series');
+vid=oct_defvar(ncid,'LPHYTO','double',dims4);
+netcdf.putAtt(ncid,vid,'long_name','Large Phytoplankton');
+netcdf.putAtt(ncid,vid,'units','mMol N m-3');
+netcdf.putAtt(ncid,vid,'fields','LPHYTO, scalar, series');
 %
-%endef(nc);
+netcdf.endDef(ncid);
 %
 % loop on time
 %
+vid_chla=netcdf.inqVarID(ncid,'CHLA');
 for l=1:tlen
   disp(['time index: ',num2str(l),' of total: ',num2str(tlen)])
-  netcdf.putVar(ncid, netcdf.inqVarID(ncid, 'SPHYTO'), l,:,:,:-1, 1, theta1*squeeze(netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'CHLA'))));  % [conv] 0-based
-  netcdf.putVar(ncid, netcdf.inqVarID(ncid, 'LPHYTO'), l,:,:,:-1, 1, theta2*squeeze(netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'CHLA'))));  % [conv] 0-based
+  % CHLA(l,:,:,:) in Fortran order [xi eta s time] (elementwise: no permutation)
+  chla=double(netcdf.getVar(ncid,vid_chla,[0 0 0 l-1],[Lp Mp N 1]));
+  netcdf.putVar(ncid,netcdf.inqVarID(ncid,'SPHYTO'),[0 0 0 l-1],[Lp Mp N 1],theta1*chla);
+  netcdf.putVar(ncid,netcdf.inqVarID(ncid,'LPHYTO'),[0 0 0 l-1],[Lp Mp N 1],theta2*chla);
 end
 netcdf.close(ncid);
 return
-

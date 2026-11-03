@@ -2,7 +2,7 @@ function oct_bry_interp_bgc_chloro(zbryname,grdfile,clmfile,lon,lat,seas_datafil
                     dataname,vname,obcndx,coef,Roa);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % 
-%  function oct_bry_interp_bgc_chloro(zbryname,lon,lat,seas_datafile,ann_datafile,...
+%  function bry_interp_bgc_chloro(zbryname,lon,lat,seas_datafile,ann_datafile,...
 %                      dataname,vname,obcndx,Roa);
 % 
 %  Interpole data for the lateral boundaries (bry_file) along 
@@ -32,6 +32,8 @@ function oct_bry_interp_bgc_chloro(zbryname,grdfile,clmfile,lon,lat,seas_datafil
 %  e-mail:Pierrick.Penven@ird.fr  
 %
 %  Updated    5-Oct-2006 by Pierrick Penven (test for negative salinity)
+%  Updated    Oct-2026 : Octave version (octave-netcdf, netcdf.* API)
+%  Andres Sepulveda 2026 - Octave adaptations
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 [M,L]=size(lon);
@@ -43,21 +45,23 @@ Roa=0;
 %
 % read in the datafile 
 %
-ncidseas = netcdf.open(seas_datafile, 'NC_NOWRITE');
-x=netcdf.getVar(ncidseas, netcdf.inqVarID(ncidseas, 'X'));
-y=netcdf.getVar(ncidseas, netcdf.inqVarID(ncidseas, 'Y'));
-t=netcdf.getVar(ncidseas, netcdf.inqVarID(ncidseas, 'T'));
+ncidseas=netcdf.open(seas_datafile,'NC_NOWRITE');
+x=double(netcdf.getVar(ncidseas,netcdf.inqVarID(ncidseas,'X')));
+y=double(netcdf.getVar(ncidseas,netcdf.inqVarID(ncidseas,'Y')));
+t=double(netcdf.getVar(ncidseas,netcdf.inqVarID(ncidseas,'T')));
+x=x(:); y=y(:); t=t(:);
 tlen=length(t);
-missval=netcdf.getAtt(ncidseas, netcdf.inqVarID(ncidseas, 'chlorophyll'), 'missing_value');
+vid_seas=netcdf.inqVarID(ncidseas,'chlorophyll');
+missval=double(netcdf.getAtt(ncidseas,vid_seas,'missing_value'));
 %
 % open the grid file  
 % 
-ng_id = netcdf.open(grdfile, 'NC_NOWRITE');
-lon=netcdf.getVar(ng_id, netcdf.inqVarID(ng_id, 'lon_rho'));
+ng=netcdf.open(grdfile,'NC_NOWRITE');
+lon=double(netcdf.getVar(ng,netcdf.inqVarID(ng,'lon_rho'))).';
 %lon(lon<0)=lon(lon<0)+360;
-lat=netcdf.getVar(ng_id, netcdf.inqVarID(ng_id, 'lat_rho'));
-h=netcdf.getVar(ng_id, netcdf.inqVarID(ng_id, 'h'));
-netcdf.close(ng_id);
+lat=double(netcdf.getVar(ng,netcdf.inqVarID(ng,'lat_rho'))).';
+h=double(netcdf.getVar(ng,netcdf.inqVarID(ng,'h'))).';
+netcdf.close(ng);
 [M,L]=size(lon);
 dl=2.;
 minlon=min(min(lon))-dl;
@@ -73,18 +77,19 @@ y=y(jmin:jmax);
 %
 % open the clim file  
 % 
-ncid = netcdf.open(clmfile, 'NC_NOWRITE');
-theta_s = netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'theta_s'));
-theta_b =  netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'theta_b'));
-Tcline  =  netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'Tcline'));
-[~,N]=netcdf.inqDim(ncid, netcdf.inqDimID(ncid, 's_rho'));
-vtransform=netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'Vtransform'));
-if  ~exist('vtransform')
-    vtransform=1; %Old Vtransform
-    disp([' NO VTRANSFORM parameter found'])
-    disp([' USE TRANSFORM default value vtransform = 1'])
+nc=netcdf.open(clmfile,'NC_NOWRITE');
+theta_s = double(netcdf.getVar(nc,netcdf.inqVarID(nc,'theta_s')));
+theta_b = double(netcdf.getVar(nc,netcdf.inqVarID(nc,'theta_b')));
+Tcline  = double(netcdf.getVar(nc,netcdf.inqVarID(nc,'Tcline')));
+[~,N]=netcdf.inqDim(nc,netcdf.inqDimID(nc,'s_rho'));
+try
+  vtransform=double(netcdf.getVar(nc,netcdf.inqVarID(nc,'Vtransform')));
+catch
+  vtransform=1; %Old Vtransform
+  disp([' NO VTRANSFORM parameter found'])
+  disp([' USE TRANSFORM default value vtransform = 1'])
 end
-netcdf.close(ncid);
+netcdf.close(nc);
 %
 % loop on time
 %
@@ -95,7 +100,9 @@ disp(['time index: ',num2str(l),' of total: ',num2str(tlen)])
 % extrapole the annual dataset on the horizontal croco grid
 %
   disp([dataname,' : horizontal interpolation of surface data'])
-  surfchla=squeeze(netcdf.getVar(ncidseas, netcdf.inqVarID(ncidseas, 'chlorophyll')));
+  % chlorophyll(l,jmin:jmax,imin:imax) -> start/count [X Y T]
+  surfchla=double(netcdf.getVar(ncidseas,vid_seas,[imin-1 jmin-1 l-1],...
+                  [imax-imin+1 jmax-jmin+1 1])).';
   surfchla=oct_get_missing_val(x,y,surfchla,missval,Roa,default);
   surfchlacroco=interp2(x,y,surfchla,lon,lat);
 %
@@ -140,17 +147,17 @@ lat=lat(jcroco,icroco);
 %
 % Open the boundary file
 %
-ncid = netcdf.open(zbryname, 'NC_WRITE');
+ncid=netcdf.open(zbryname,'NC_WRITE');
+vid_out=netcdf.inqVarID(ncid,vname);
 %
 % loop on time
 % 
-dims=size(lon);
 for l=1:tlen
 %for l=1:1
   disp(['writing time index: ',num2str(l),' of total: ',num2str(tlen)])
-  datazgrid=squeeze(chlacroco(l,:,jcroco,icroco));
-  netcdf.putVar(ncid, netcdf.inqVarID(ncid, vname), l,:,:-1, 1, coef.*datazgrid);  % [conv] 0-based
+  datazgrid=reshape(chlacroco(l,:,jcroco,icroco),N,length(lon(:)));   % (N,npoints)
+  % nc{vname}(l,:,:)=coef.*datazgrid : variable (time,s_rho,xi|eta) -> Fortran [xi|eta s time]
+  netcdf.putVar(ncid,vid_out,[0 0 l-1],[size(datazgrid,2) N 1],(coef.*datazgrid).');
 end
 netcdf.close(ncid);
 return
-

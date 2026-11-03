@@ -46,6 +46,8 @@
 %  Patricio Marchesiello, chief, IRD, 2007.                       %
 %  Christophe Eugene Raoul Menkes, the slave, IRD, 2007.          %
 %  Elodie Gutknecht, 2013
+%  Updated    Oct-2026 : Octave version (octave-netcdf, netcdf.* API)
+%  Andres Sepulveda 2026 - Octave adaptations
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -89,28 +91,28 @@ disp([' Title: ',CROCO_title])
 %
 disp(' ')
 disp(' Read in the grid...')
-ncid = netcdf.open(grdname, 'NC_NOWRITE');
-lon=netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'lon_rho'));
-lat=netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'lat_rho'));
-[~,Lp]=netcdf.inqDim(ncid, netcdf.inqDimID(ncid, 'xi_rho'));
-[~,Mp]=netcdf.inqDim(ncid, netcdf.inqDimID(ncid, 'eta_rho'));
-hmax=max(max(netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'h'))));
+ncid=netcdf.open(grdname,'NC_NOWRITE');
+lon=double(netcdf.getVar(ncid,netcdf.inqVarID(ncid,'lon_rho'))).';
+lat=double(netcdf.getVar(ncid,netcdf.inqVarID(ncid,'lat_rho'))).';
+[~,Lp]=netcdf.inqDim(ncid,netcdf.inqDimID(ncid,'xi_rho'));
+[~,Mp]=netcdf.inqDim(ncid,netcdf.inqDimID(ncid,'eta_rho'));
+hmax=max(max(double(netcdf.getVar(ncid,netcdf.inqVarID(ncid,'h')))));
 netcdf.close(ncid);
 % %
 %Get the time of data
 %
-ncid = netcdf.open(no3_seas_data, 'NC_NOWRITE');
-time_no3=netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'T'));
+ncid=netcdf.open(no3_seas_data,'NC_NOWRITE');
+time_no3=double(netcdf.getVar(ncid,netcdf.inqVarID(ncid,'T')));
 netcdf.close(ncid);
 time_no3=(time_no3)*30;
 %
-ncid = netcdf.open(o2_seas_data, 'NC_NOWRITE');
-time_o2=netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'T'));
+ncid=netcdf.open(o2_seas_data,'NC_NOWRITE');
+time_o2=double(netcdf.getVar(ncid,netcdf.inqVarID(ncid,'T')));
 netcdf.close(ncid);
 time_o2=(time_o2)*30;
 %
-ncid = netcdf.open(chla_seas_data, 'NC_NOWRITE');
-time_chla=netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'T'));
+ncid=netcdf.open(chla_seas_data,'NC_NOWRITE');
+time_chla=double(netcdf.getVar(ncid,netcdf.inqVarID(ncid,'T')));
 netcdf.close(ncid);
 time_chla=(time_chla)*30;
 time_zoo=time_chla;
@@ -144,8 +146,8 @@ if (makeZbry)
 %
 % get Z
 %
-    ncid = netcdf.open(no3_ann_data, 'NC_NOWRITE');
-  Z=netcdf.getVar(ncid, netcdf.inqVarID(ncid, 'Z'));
+  ncid=netcdf.open(no3_ann_data,'NC_NOWRITE');
+  Z=double(netcdf.getVar(ncid,netcdf.inqVarID(ncid,'Z')));
   kmax=max(find(Z<hmax))-1;
   Z=Z(1:kmax);
   netcdf.close(ncid);

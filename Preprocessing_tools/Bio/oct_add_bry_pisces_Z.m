@@ -63,8 +63,23 @@ if makequota
 end
 time=time(:);
 for n=1:length(tnames)
-  did = netcdf.defDim(ncid,tnames{n},length(time));
-  vid = netcdf.defVar(ncid,tnames{n},'double',did);
+  try                                   % already there (second run): reused
+    did = netcdf.inqDimID(ncid,tnames{n});
+    [~,nt0] = netcdf.inqDim(ncid,did);
+    if nt0~=length(time)
+      netcdf.close(ncid);
+      error(['%s: dimension ',tnames{n},' has %d records in the file, %d now: ',...
+             'make the file again (oct_make_bry)'],mfilename,nt0,length(time));
+    end
+  catch err
+    if ~isempty(strfind(err.message,'records in the file')), rethrow(err); end
+    did = oct_defdim(ncid,tnames{n},length(time));
+  end
+  try
+    vid = netcdf.inqVarID(ncid,tnames{n});
+  catch
+    vid = oct_defvar(ncid,tnames{n},'double',did);
+  end
   netcdf.putAtt(ncid,vid,'long_name',tlongs{n});
   oct_write_time_attributes(ncid,tnames{n},cycle,time_unit_att,time_second_unit_att,...
     calendar_att,insecond,add_cycle);
@@ -73,7 +88,7 @@ end
 try
   netcdf.inqDimID(ncid,'one');
 catch
-  netcdf.defDim(ncid,'one',1);
+  oct_defdim(ncid,'one',1);
 end
 %
 %  Boundary variables: (time,Z,xi_rho) for S/N, (time,Z,eta_rho) for E/W
@@ -95,7 +110,11 @@ for obcndx=1:4
     did_h = netcdf.inqDimID(ncid,hdim{obcndx});
     for n=1:length(vnames)
       did_t = netcdf.inqDimID(ncid,vtimes{n});
-      vid = netcdf.defVar(ncid,[vnames{n},suffix{obcndx}],'double',[did_h did_z did_t]);
+      try                               % already there (second run): reused
+        vid = netcdf.inqVarID(ncid,[vnames{n},suffix{obcndx}]);
+      catch
+        vid = oct_defvar(ncid,[vnames{n},suffix{obcndx}],'double',[did_h did_z did_t]);
+      end
       netcdf.putAtt(ncid,vid,'long_name',[bname{obcndx},' boundary ',lnames{n}]);
       netcdf.putAtt(ncid,vid,'units','mMol N m-3');
     end
