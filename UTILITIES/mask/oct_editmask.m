@@ -663,7 +663,7 @@ end
 P=[];
 if isfield(S.cst,'poly'), P=S.cst.poly; end
 if strcmp(res,'button')
-  if isempty(P), res='i'; else, res=''; end
+  if isempty(P), res='f'; else, res=''; end
 end
 if isempty(res) && isempty(P)
   errordlg({'The coastline in use has no polygons.',...
