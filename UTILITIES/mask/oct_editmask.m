@@ -81,6 +81,15 @@ function fig_out=oct_editmask(grid_file,coast_file)
 %     water. The change can be undone; the U/V/PSI masks are recomputed
 %     when saving. "Remove isolated" can then be used.
 %
+%   NO 1-CELL BAYS (menu Mask, "Fill 1-cell bays automatically", on by
+%   default): a sea cell with land in at least 3 of its 4 neighbours
+%   (cells outside the grid count as sea) becomes land. This is repeated
+%   until no such cell is left, so 1-cell-wide dead-end channels are
+%   filled too (as in oct_process_mask). It is applied after every
+%   change of the mask (mask from the coastline, edits, Remove isolated)
+%   and before saving; it is part of the same Undo step. If the option is
+%   switched on, the current mask is processed at once.
+%
 %   Buttons: Zoom in (drag a box), Zoom out, Undo (several levels),
 %   Revert (last saved mask), Remove isolated (sea cells with no sea
 %   neighbour in the 4 directions become land, and land cells
@@ -94,7 +103,7 @@ function fig_out=oct_editmask(grid_file,coast_file)
 %
 %  This file is part of CROCOTOOLS (GNU General Public License).
 %  Andres Sepulveda 2026 - Octave adaptations (mask from the GSHHS
-%  coastline: Nov-2026)
+%  coastline, no 1-cell bays: Nov-2026)
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 if nargin<1 || isempty(grid_file)
@@ -178,6 +187,8 @@ S.cst=read_coast(coast_file,S);
 S.coastfile=coast_file;
 S.mrule=2;                   % mask from coastline: 1 cell centre, 2 >= 50% of the cell
 S.mlakes=1;                  % inland lakes: 1 land, 2 water
+S.nobays=1;                  % 1: sea cells with >= 3 land neighbours become land
+S.lastfill=0;                % cells filled by the last change
 %
 % Figure
 %
@@ -206,6 +217,8 @@ S.hrule(1)=uimenu(hk,'Label','Land cell: centre on land','Callback',{@cb_mrule,1
 S.hrule(2)=uimenu(hk,'Label','Land cell: >= 50% of the cell on land','Callback',{@cb_mrule,2});
 S.hlake(1)=uimenu(hk,'Label','Inland lakes: land','Callback',{@cb_mlakes,1},'Separator','on');
 S.hlake(2)=uimenu(hk,'Label','Inland lakes: water','Callback',{@cb_mlakes,2});
+S.hbays=uimenu(hk,'Label','Fill 1-cell bays automatically (sea cell with >= 3 land neighbours)',...
+               'Callback',@cb_nobays,'Separator','on');
 hv=uimenu(fig,'Label','View');
 S.hview(1)=uimenu(hv,'Label','Geographic (lon/lat)','Callback',{@cb_view,'geo'});
 S.hview(2)=uimenu(hv,'Label','Grid indices (I,J)','Callback',{@cb_view,'ij'});
@@ -639,6 +652,7 @@ for k=1:2
   set(S.hrule(k),'Checked',ifelse(S.mrule==k,'on','off'));
   set(S.hlake(k),'Checked',ifelse(S.mlakes==k,'on','off'));
 end
+set(S.hbays,'Checked',ifelse(S.nobays,'on','off'));
 return
 %
 function cb_mrule(src,~,k)
@@ -649,6 +663,50 @@ return
 function cb_mlakes(src,~,k)
 fig=ancestor(src,'figure'); S=guidata(fig);
 S.mlakes=k; guidata(fig,S); update_mmenus(fig);
+return
+%
+function cb_nobays(src,~)
+fig=ancestor(src,'figure'); S=guidata(fig);
+S.nobays=~S.nobays;
+if S.nobays                          % process the current mask at once
+  m=S.mask;
+  [S.mask,n]=fill_bays(m);
+  if n>0
+    S.undo{end+1}=m; if numel(S.undo)>S.maxundo, S.undo(1)=[]; end
+    S.changed=1;
+  end
+  S.lastfill=n;
+end
+guidata(fig,S); update_mmenus(fig); refresh_mask(fig);
+return
+%
+function [m,ntot]=fill_bays(m)
+%
+% Sea cells (m==1) with land in at least 3 of their 4 neighbours become
+% land, repeatedly (1-cell bays and 1-cell-wide dead-end channels).
+% Neighbours outside the grid count as sea. m is (xi,eta).
+%
+ntot=0;
+[Lp,Mp]=size(m);
+while true
+  pad=ones(Lp+2,Mp+2); pad(2:end-1,2:end-1)=m;
+  nland=4-(pad(1:end-2,2:end-1)+pad(3:end,2:end-1)+pad(2:end-1,1:end-2)+pad(2:end-1,3:end));
+  bay=(m==1 & nland>=3);
+  n=sum(bay(:));
+  if n==0, break, end
+  m(bay)=0; ntot=ntot+n;
+end
+return
+%
+function S=auto_fill(S)
+% apply fill_bays after a change of the mask (same undo step)
+S.lastfill=0;
+if S.nobays
+  [S.mask,S.lastfill]=fill_bays(S.mask);
+  if S.lastfill>0
+    disp(sprintf('oct_editmask: %d 1-cell bay cells set to land',S.lastfill))
+  end
+end
 return
 %
 function cb_maskcoast(src,~,res)
@@ -663,7 +721,7 @@ end
 P=[];
 if isfield(S.cst,'poly'), P=S.cst.poly; end
 if strcmp(res,'button')
-  if isempty(P), res='f'; else, res=''; end
+  if isempty(P), res='i'; else, res=''; end
 end
 if isempty(res) && isempty(P)
   errordlg({'The coastline in use has no polygons.',...
@@ -687,7 +745,10 @@ end
 set(S.hstat,'String',['Mask from ',P.name,'...']); drawnow
 land=mask_from_polygons(S,P.ncst,S.mrule,S.mlakes);
 newmask=double(~land);
+nfill=0;
+if S.nobays, [newmask,nfill]=fill_bays(newmask); end
 nchg=sum(newmask(:)~=S.mask(:));
+S.lastfill=nfill;
 if nchg>0
   S=push_undo(S);
   S.mask=newmask;
@@ -697,10 +758,10 @@ guidata(fig,S);
 refresh_mask(fig);
 rules={'cell centre on land','>= 50% of the cell on land'};
 lakes={'land','water'};
-msg=sprintf('Mask from %s (%s, lakes: %s): %d land cells, %d cells changed',...
-            P.name,rules{S.mrule},lakes{S.mlakes},sum(~newmask(:)),nchg);
+msg=sprintf('Mask from %s (%s, lakes: %s): %d land cells, %d cells changed, %d bay cells filled',...
+            P.name,rules{S.mrule},lakes{S.mlakes},sum(~newmask(:)),nchg,nfill);
 disp(['oct_editmask: ',msg])
-set(S.hstat,'String',sprintf('Mask from coastline:\n%d land, %d changed',sum(~newmask(:)),nchg));
+set(S.hstat,'String',sprintf('Mask from coastline:\n%d land, %d changed, %d bays',sum(~newmask(:)),nchg,nfill));
 return
 %
 function land=mask_from_polygons(S,ncst,rule,lakes)
@@ -815,8 +876,13 @@ end
 nm=[S.figname,' - ',S.file];
 if S.changed, nm=[nm,' *']; end
 set(fig,'Name',nm);
-set(S.hstat,'String',sprintf('sea: %d  land: %d\nundo levels: %d',...
-    sum(S.mask(:)),numel(S.mask)-sum(S.mask(:)),numel(S.undo)));
+if S.lastfill>0
+  set(S.hstat,'String',sprintf('sea: %d  land: %d  undo: %d\n%d bay cells filled',...
+      sum(S.mask(:)),numel(S.mask)-sum(S.mask(:)),numel(S.undo),S.lastfill));
+else
+  set(S.hstat,'String',sprintf('sea: %d  land: %d\nundo levels: %d',...
+      sum(S.mask(:)),numel(S.mask)-sum(S.mask(:)),numel(S.undo)));
+end
 return
 %
 function p=cur_point(S)
@@ -861,6 +927,7 @@ if S.mode==1
 else
   S.mask(sel)=target_value(S,0);
 end
+S=auto_fill(S);
 S.changed=1;
 return
 %
@@ -935,6 +1002,7 @@ switch sel
       switch S.tool
         case 1
           S=push_undo(S);
+          S.lastfill=0;
           [i,j]=p2ij(S,p);
           S.paintval=target_value(S,S.mask(i,j));
           S=paint(S,p);
@@ -992,6 +1060,7 @@ p=cur_point(S);
 switch S.action
   case 'paint'
     S.action='';
+    S=auto_fill(S);
   case 'rect'
     sel=(S.px-S.p0(1)).*(S.px-p(1))<=0 & (S.py-S.p0(2)).*(S.py-p(2))<=0;
     if abs(p(1)-S.p0(1))<S.tol && abs(p(2)-S.p0(2))<S.tol    % simple click
@@ -1086,6 +1155,7 @@ fig=ancestor(src,'figure'); S=guidata(fig);
 if ~isempty(S.undo)
   S.mask=S.undo{end}; S.undo(end)=[];
   S.changed=~isequal(S.mask,S.saved);
+  S.lastfill=0;
   guidata(fig,S); refresh_mask(fig);
 end
 return
@@ -1093,7 +1163,7 @@ return
 function cb_revert(src,~)
 fig=ancestor(src,'figure'); S=guidata(fig);
 S=push_undo(S);
-S.mask=S.saved; S.changed=0;
+S.mask=S.saved; S.changed=0; S.lastfill=0;
 guidata(fig,S); refresh_mask(fig);
 return
 %
@@ -1107,16 +1177,25 @@ nb([1 end],:)=nb([1 end],:)-1; nb(:,[1 end])=nb(:,[1 end])-1;
 newm=m;
 newm(m==1 & nsea==0)=0;        % isolated sea point -> land
 newm(m==0 & nsea==nb)=1;       % isolated land point -> sea
+nf=0;
+if S.nobays, [newm,nf]=fill_bays(newm); end
 n=sum(newm(:)~=m(:));
 if n>0
   S=push_undo(S); S.mask=newm; S.changed=1;
 end
 guidata(fig,S); refresh_mask(fig);
-set(S.hstat,'String',sprintf('%d isolated points changed',n));
+set(S.hstat,'String',sprintf('%d points changed\n(%d bay cells filled)',n,nf));
 return
 %
 function cb_save(src,~)
 fig=ancestor(src,'figure'); S=guidata(fig);
+if S.nobays
+  [m,n]=fill_bays(S.mask);
+  if n>0
+    S=push_undo(S); S.mask=m;
+    disp(sprintf('oct_editmask: %d 1-cell bay cells set to land before saving',n))
+  end
+end
 rmask=S.mask;
 [Lp,Mp]=size(rmask); L=Lp-1; M=Mp-1;
 umask=rmask(2:Lp,:).*rmask(1:L,:);
