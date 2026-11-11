@@ -63,6 +63,24 @@ function fig_out=oct_editmask(grid_file,coast_file)
 %     u  (or Ctrl+z)    : undo last change
 %     s                 : save
 %
+%   LAND/SEA MASK FROM THE COASTLINE (menu "Mask" and button "Mask from
+%   coastline"): the mask of the whole grid is computed from coastline
+%   POLYGONS (point-in-polygon test, even-odd rule on the nested
+%   polygons):
+%     - "From the coastline file": the polygons of the coastline file in
+%       use (a GSHHS file saved by m_gshhs_X('save',...) as the
+%       coastline_X.mat of oct_make_coast, variables ncst, k, Area; or an
+%       ESRI polygon shapefile). Default of the button.
+%     - "From GSHHS crude ... full": GSHHS polygons around the grid read
+%       with m_map (gshhs_X.b files in UTILITIES/m_map1.4h/private, see
+%       oct_make_gshhs_link). The coastline drawn is replaced by them.
+%     Rule (menu): a cell is land if its centre (rho point) is on land, or
+%     if at least half of the cell is on land (4x4 points per cell,
+%     default). Inland lakes (GSHHS levels 2 and 4, holes of polygon
+%     shapefiles): land (default, they are not connected to the ocean) or
+%     water. The change can be undone; the U/V/PSI masks are recomputed
+%     when saving. "Remove isolated" can then be used.
+%
 %   Buttons: Zoom in (drag a box), Zoom out, Undo (several levels),
 %   Revert (last saved mask), Remove isolated (sea cells with no sea
 %   neighbour in the 4 directions become land, and land cells
@@ -71,7 +89,12 @@ function fig_out=oct_editmask(grid_file,coast_file)
 %   In oct_make_grid the editor is opened with uiwait/waitfor, so the
 %   script continues once the window is closed.
 %
+%  EDITMASK (Matlab):
+% ashcherbina@ucsd.edu, 11/15/01
+%
 %  This file is part of CROCOTOOLS (GNU General Public License).
+%  Andres Sepulveda 2026 - Octave adaptations (mask from the GSHHS
+%  coastline: Nov-2026)
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 if nargin<1 || isempty(grid_file)
@@ -152,6 +175,9 @@ end
 % Coastline: raw (lon,lat) vertices (original resolution)
 %
 S.cst=read_coast(coast_file,S);
+S.coastfile=coast_file;
+S.mrule=2;                   % mask from coastline: 1 cell centre, 2 >= 50% of the cell
+S.mlakes=1;                  % inland lakes: 1 land, 2 water
 %
 % Figure
 %
@@ -170,6 +196,16 @@ for k=1:size(res,1)
          'Separator',ifelse(k==1,'on','off'));
 end
 uimenu(hm,'Label','Remove coastline','Callback',@cb_nocoast,'Separator','on');
+hk=uimenu(fig,'Label','Mask');
+uimenu(hk,'Label','Mask from the coastline file (polygons)','Callback',{@cb_maskcoast,''});
+hg=uimenu(hk,'Label','Mask from GSHHS');
+for k=1:size(res,1)
+  uimenu(hg,'Label',['Mask from GSHHS ',res{k,2},' resolution'],'Callback',{@cb_maskcoast,res{k,1}});
+end
+S.hrule(1)=uimenu(hk,'Label','Land cell: centre on land','Callback',{@cb_mrule,1},'Separator','on');
+S.hrule(2)=uimenu(hk,'Label','Land cell: >= 50% of the cell on land','Callback',{@cb_mrule,2});
+S.hlake(1)=uimenu(hk,'Label','Inland lakes: land','Callback',{@cb_mlakes,1},'Separator','on');
+S.hlake(2)=uimenu(hk,'Label','Inland lakes: water','Callback',{@cb_mlakes,2});
 hv=uimenu(fig,'Label','View');
 S.hview(1)=uimenu(hv,'Label','Geographic (lon/lat)','Callback',{@cb_view,'geo'});
 S.hview(2)=uimenu(hv,'Label','Grid indices (I,J)','Callback',{@cb_view,'ij'});
@@ -219,18 +255,21 @@ S.hbrush=uicontrol(fig,'Style','popupmenu','Units','normalized','Position',[x0+.
           'String',{'1','3','5','9','15'},'Value',1,'Callback',@set_brush);
 bt={'Zoom in (box)',@cb_zoomin; 'Zoom out',@cb_zoomout; 'Undo',@cb_undo;...
     'Revert to saved',@cb_revert; 'Remove isolated',@cb_isolated;...
-    'Save',@cb_save; 'Exit',@cb_exit};
-ypos=[.43 .385 .32 .275 .21 .12 .06];
+    'Save',@cb_save; 'Exit',@cb_exit; 'Mask from coastline',{@cb_maskcoast,'button'}};
+ypos=[.43 .385 .32 .275 .21 .12 .06 .165];
 for k=1:size(bt,1)
   S.hbut(k)=uicontrol(fig,'Style','pushbutton','Units','normalized',...
      'Position',[x0 ypos(k) w .04],'String',bt{k,1},'Callback',bt{k,2});
 end
+set(S.hbut(8),'TooltipString',['Land/sea mask of the whole grid from the polygons of the coastline file ',...
+    '(e.g. coastline_l.mat of GSHHS), else from GSHHS intermediate (menu Mask: other sources/rules)']);
 S.hstat=uicontrol(fig,'Style','text','Units','normalized','Position',[x0 .005 w .045],...
           'String','','HorizontalAlignment','left','BackgroundColor',[.94 .94 .94]);
 set(fig,'WindowButtonDownFcn',@cb_down,'WindowButtonMotionFcn',@cb_move,...
         'WindowButtonUpFcn',@cb_up,'KeyPressFcn',@cb_key,...
         'CloseRequestFcn',@cb_exit);
 guidata(fig,S);
+update_mmenus(fig);
 refresh_mask(fig);
 if nargout>0, fig_out=fig; end
 return
@@ -245,16 +284,19 @@ function C=read_coast(coast_file,S)
 % (C.lon, C.lat, longitudes wrapped to the grid convention) or grid
 % indices (C.icst, C.jcst) for the files written by ijcoast.
 %
-C=struct('lon',[],'lat',[],'icst',[],'jcst',[],'ij',[]);
+C=struct('lon',[],'lat',[],'icst',[],'jcst',[],'ij',[],'poly',[]);
 if isempty(coast_file), return, end
 if ~exist(coast_file,'file')
   warning(['oct_editmask: coast file not found: ',coast_file]); return
 end
 [~,~,ext]=fileparts(coast_file);
 if strcmpi(ext,'.shp')
-  [lon,lat]=read_shapefile(coast_file);
+  [lon,lat,stype]=read_shapefile(coast_file);
   disp(sprintf('oct_editmask: %d coastline points read in the shapefile %s',sum(isfinite(lon)),coast_file))
   C=set_coast_lonlat(C,lon,lat,S);
+  if any(stype==[5 15 25])                      % polygons: usable for the mask
+    C.poly=struct('ncst',[lon(:) lat(:)],'Area',[],'name',coast_file);
+  end
   return
 end
 D=load(coast_file);
@@ -266,6 +308,8 @@ if isfield(D,'lon') && isfield(D,'lat')
   lon=D.lon(:); lat=D.lat(:);
 elseif isfield(D,'ncst')
   lon=D.ncst(:,1); lat=D.ncst(:,2);
+  A=[]; if isfield(D,'Area'), A=D.Area; end
+  P=struct('ncst',double(D.ncst),'Area',double(A),'name',coast_file);
 else
   lon=[]; lat=[];
   f=fieldnames(D);
@@ -283,6 +327,7 @@ else
 end
 disp(['oct_editmask: coastline read in ',coast_file])
 C=set_coast_lonlat(C,double(lon),double(lat),S);
+if exist('P','var'), C.poly=P; end             % GSHHS polygons (ncst, Area)
 return
 %
 function C=set_coast_lonlat(C,lon,lat,S)
@@ -291,6 +336,7 @@ function C=set_coast_lonlat(C,lon,lat,S)
 % separators kept), longitudes in the convention of the grid
 %
 C.lon=[]; C.lat=[]; C.icst=[]; C.jcst=[]; C.ij=[];
+if ~isfield(C,'poly'), C.poly=[]; end
 lon=lon(:); lat=lat(:);
 if isempty(S.lon)
   warning('oct_editmask: no lon_rho/lat_rho in the grid: coastline not drawn'); return
@@ -351,7 +397,7 @@ if any(ok)
 end
 return
 %
-function [lon,lat]=read_shapefile(fname)
+function [lon,lat,stype]=read_shapefile(fname)
 %
 % Minimal ESRI shapefile reader (no toolbox needed): polyline and polygon
 % shapes (types 3, 5, 13, 15, 23, 25), parts separated by NaN.
@@ -518,7 +564,7 @@ if exist('coastfilemask','var'), P.mask=coastfilemask; end
 if exist('coastfileplot','var'), P.plot=coastfileplot; end
 return
 %
-function [lon,lat]=gshhs_coast(S,res)
+function [lon,lat,P]=gshhs_coast(S,res)
 %
 % Coastline from the GSHHS database of m_map (m_gshhs_<res>) around the
 % grid. If the GSHHS files are not installed, m_map uses its coarse
@@ -533,6 +579,8 @@ feval(['m_gshhs_',res],'save',f);
 D=load(f);
 delete(f);
 lon=D.ncst(:,1); lat=D.ncst(:,2);
+A=[]; if isfield(D,'Area'), A=D.Area; end
+P=struct('ncst',double(D.ncst),'Area',double(A),'name',['GSHHS ',res]);
 return
 %
 function v=ifelse(c,a,b)
@@ -566,8 +614,9 @@ function cb_gshhs(src,~,res)
 fig=ancestor(src,'figure'); S=guidata(fig);
 set(S.hstat,'String','Reading GSHHS coastline...'); drawnow
 try
-  [lon,lat]=gshhs_coast(S,res);
+  [lon,lat,P]=gshhs_coast(S,res);
   C=set_coast_lonlat(S.cst,lon,lat,S);
+  C.poly=P;
   set_coast(fig,C);
 catch err
   errordlg(['GSHHS coastline: ',err.message],'Mask editor');
@@ -577,7 +626,178 @@ return
 %
 function cb_nocoast(src,~)
 fig=ancestor(src,'figure'); S=guidata(fig);
-set_coast(fig,struct('lon',[],'lat',[],'icst',[],'jcst',[],'ij',[]));
+set_coast(fig,struct('lon',[],'lat',[],'icst',[],'jcst',[],'ij',[],'poly',[]));
+return
+%
+%---------------------------------------------------------------------
+% Land/sea mask from the coastline polygons
+%---------------------------------------------------------------------
+%
+function update_mmenus(fig)
+S=guidata(fig);
+for k=1:2
+  set(S.hrule(k),'Checked',ifelse(S.mrule==k,'on','off'));
+  set(S.hlake(k),'Checked',ifelse(S.mlakes==k,'on','off'));
+end
+return
+%
+function cb_mrule(src,~,k)
+fig=ancestor(src,'figure'); S=guidata(fig);
+S.mrule=k; guidata(fig,S); update_mmenus(fig);
+return
+%
+function cb_mlakes(src,~,k)
+fig=ancestor(src,'figure'); S=guidata(fig);
+S.mlakes=k; guidata(fig,S); update_mmenus(fig);
+return
+%
+function cb_maskcoast(src,~,res)
+%
+% res: '' polygons of the coastline file, 'c','l','i','h','f' GSHHS,
+% 'button': coastline file if it has polygons, else GSHHS intermediate
+%
+fig=ancestor(src,'figure'); S=guidata(fig);
+if isempty(S.lon)
+  errordlg('The grid has no lon_rho/lat_rho: no mask from a coastline','Mask editor'); return
+end
+P=[];
+if isfield(S.cst,'poly'), P=S.cst.poly; end
+if strcmp(res,'button')
+  if isempty(P), res='i'; else, res=''; end
+end
+if isempty(res) && isempty(P)
+  errordlg({'The coastline in use has no polygons.',...
+            'Load a GSHHS coastline_X.mat file (variables ncst, Area; written by oct_make_coast)',...
+            'or a polygon shapefile (menu Coastline), or use Mask > Mask from GSHHS.'},'Mask editor');
+  return
+end
+if ~isempty(res)
+  set(S.hstat,'String',['Reading GSHHS ',res,'...']); drawnow
+  try
+    [lon,lat,P]=gshhs_coast(S,res);
+  catch err
+    errordlg({['GSHHS (',res,'): ',err.message],...
+              'The gshhs_X.b files must be in UTILITIES/m_map1.4h/private (see oct_make_gshhs_link).'},...
+             'Mask editor');
+    refresh_mask(fig); return
+  end
+  C=set_coast_lonlat(S.cst,lon,lat,S); C.poly=P;
+  set_coast(fig,C); S=guidata(fig);
+end
+set(S.hstat,'String',['Mask from ',P.name,'...']); drawnow
+land=mask_from_polygons(S,P.ncst,S.mrule,S.mlakes);
+newmask=double(~land);
+nchg=sum(newmask(:)~=S.mask(:));
+if nchg>0
+  S=push_undo(S);
+  S.mask=newmask;
+  S.changed=1;
+end
+guidata(fig,S);
+refresh_mask(fig);
+rules={'cell centre on land','>= 50% of the cell on land'};
+lakes={'land','water'};
+msg=sprintf('Mask from %s (%s, lakes: %s): %d land cells, %d cells changed',...
+            P.name,rules{S.mrule},lakes{S.mlakes},sum(~newmask(:)),nchg);
+disp(['oct_editmask: ',msg])
+set(S.hstat,'String',sprintf('Mask from coastline:\n%d land, %d changed',sum(~newmask(:)),nchg));
+return
+%
+function land=mask_from_polygons(S,ncst,rule,lakes)
+%
+% land(Lp,Mp): true for the land cells. rule 1: cell centre (rho point)
+% on land; rule 2: at least half of 4x4 points of the cell on land.
+% lakes 1: inland lakes are land (inside at least one polygon),
+% lakes 2: water (odd number of nested polygons).
+%
+if rule==1
+  px=S.lon(:); py=S.lat(:); ns=1;
+else
+  ns=4;
+  a=((1:ns)-0.5)/ns;
+  X00=S.xcor(1:end-1,1:end-1); X10=S.xcor(2:end,1:end-1); X01=S.xcor(1:end-1,2:end); X11=S.xcor(2:end,2:end);
+  Y00=S.ycor(1:end-1,1:end-1); Y10=S.ycor(2:end,1:end-1); Y01=S.ycor(1:end-1,2:end); Y11=S.ycor(2:end,2:end);
+  px=zeros(numel(X00),ns*ns); py=px; n=0;
+  for ia=1:ns
+    for ib=1:ns
+      n=n+1; u=a(ia); v=a(ib);
+      px(:,n)=(1-u)*(1-v)*X00(:)+u*(1-v)*X10(:)+(1-u)*v*X01(:)+u*v*X11(:);
+      py(:,n)=(1-u)*(1-v)*Y00(:)+u*(1-v)*Y10(:)+(1-u)*v*Y01(:)+u*v*Y11(:);
+    end
+  end
+  px=px(:); py=py(:);
+end
+depth=polygon_depth(px,py,ncst,mean(S.lon(:)));
+if lakes==1, onland=depth>=1; else, onland=mod(depth,2)==1; end
+onland=reshape(onland,[S.Lp*S.Mp ns*ns]);
+land=reshape(mean(onland,2)>=0.5,S.Lp,S.Mp);
+return
+%
+function depth=polygon_depth(px,py,ncst,lon0)
+%
+% Number of the (NaN separated, closed or not) polygons of NCST that
+% contain each point (px,py): crossing number of the ray towards +x,
+% computed for each (edge, point) pair whose latitude band matches
+% (points sorted by latitude), parity per polygon. Polygons are shifted
+% by +-360 degrees as a whole to the longitude convention of the grid
+% (centre lon0).
+%
+np=numel(px); depth=zeros(np,1);
+x=ncst(:,1); y=ncst(:,2);
+x=x(:); y=y(:);
+brk=~isfinite(x) | ~isfinite(y);
+x(brk)=NaN; y(brk)=NaN;
+x=[NaN; x; NaN]; y=[NaN; y; NaN];
+st=find(~isnan(x(2:end)) & isnan(x(1:end-1)))+1;     % polygon starts
+en=find(~isnan(x(1:end-1)) & isnan(x(2:end)));       % polygon ends
+npoly=numel(st);
+if npoly==0, return, end
+pid=zeros(size(x)); pid(st)=1; pid=cumsum(pid); pid(isnan(x))=0;
+for k=1:npoly                                        % +-360 shift of whole polygons
+  m=mean(x(st(k):en(k)));
+  if m<lon0-180, x(st(k):en(k))=x(st(k):en(k))+360*ceil((lon0-180-m)/360); end
+  if m>lon0+180, x(st(k):en(k))=x(st(k):en(k))-360*ceil((m-lon0-180)/360); end
+end
+% edges: consecutive vertices + closing edge of each polygon
+i1=find(~isnan(x(1:end-1)) & ~isnan(x(2:end)));
+x1=[x(i1); x(en)]; y1=[y(i1); y(en)];
+x2=[x(i1+1); x(st)]; y2=[y(i1+1); y(st)];
+ep=[pid(i1); pid(en)];
+% only the edges that can be crossed by a ray of a point
+ymn=min(y1,y2); ymx=max(y1,y2);
+ok=ymx>=min(py) & ymn<=max(py) & max(x1,x2)>=min(px) & y1~=y2;
+x1=x1(ok); y1=y1(ok); x2=x2(ok); y2=y2(ok); ep=ep(ok); ymn=ymn(ok); ymx=ymx(ok);
+if isempty(x1), return, end
+[s,ord]=sort(py(:));
+lo=lookup(s,ymn-1e-12)+1;                            % points with ymn <= py <= ymx
+hi=lookup(s,ymx);
+nn=max(hi-lo+1,0);
+cs=cumsum(nn);
+cnt=sparse(np,npoly);
+chunk=4e6; e0=1;
+ne=numel(x1);
+while e0<=ne
+  base=0; if e0>1, base=cs(e0-1); end
+  e1=find(cs-base<=chunk,1,'last');
+  if isempty(e1) || e1<e0, e1=e0; end
+  ee=(e0:e1)';
+  n=nn(ee);
+  P=sum(n);
+  if P>0
+    e=repelem(ee,n);
+    off=(1:P)'-repelem(cumsum([0; n(1:end-1)]),n)-1;
+    q=ord(lo(e)+off);
+    yq=py(q); xq=px(q);
+    c=(y1(e)<=yq)~=(y2(e)<=yq);                      % half-open rule
+    xi=x1(e)+(yq-y1(e)).*(x2(e)-x1(e))./(y2(e)-y1(e));
+    c=c & xi>xq;
+    if any(c)
+      cnt=cnt+sparse(q(c),ep(e(c)),1,np,npoly);
+    end
+  end
+  e0=e1+1;
+end
+depth=full(sum(mod(cnt,2),2));
 return
 %
 function c=cdata(S)
