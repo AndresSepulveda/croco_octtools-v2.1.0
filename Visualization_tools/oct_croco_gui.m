@@ -15,8 +15,18 @@ function varargout = oct_croco_gui(varargin)
 %  oct_get_hslice, oct_get_depths...). Needs the qt graphics toolkit
 %  (octave with GUI or octave --no-gui, not octave-cli).
 %
-%  Menus: History file, Grid file, Coastline file, Town names file,
+%  Menus: History file, Grid file, Coastline, Town names file,
 %         View bathymetry.
+%  Coastline menu: a coastline MAT file (lon/lat or GSHHS ncst, as
+%  written by oct_make_coast), or the GSHHS coastline at crude, low,
+%  intermediate, high or full resolution, extracted with m_map around the
+%  grid (+10%) when it is selected (cached in tempdir, so changing the
+%  resolution back or reopening a file of the same grid is immediate), or
+%  no coastline. The choice is kept when another history file is opened
+%  (the GSHHS coastline is extracted again for a different grid). The
+%  GSHHS resolutions whose gshhs_X.b file is not in
+%  UTILITIES/m_map1.4h/private (see oct_make_gshhs_link) are marked
+%  "(not installed)".
 %  Mouse selections (Vertical section, Hovmuller, Time series, Vertical
 %  profile, T-S diagram) use ginput on the map: click the 2 ends of the
 %  section or the point of the profile/time series.
@@ -55,7 +65,8 @@ function varargout = oct_croco_gui(varargin)
 %  e-mail:Pierrick.Penven@ird.fr
 %
 %  Updated 02-Nov-2006 by Pierrick Penven (Yorig)
-%  Andres Sepulveda 2026 - Octave adaptations
+%  Andres Sepulveda 2026 - Octave adaptations (GSHHS coastline menu:
+%  Nov-2026)
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 isfile_arg = (nargin>=1) && ischar(varargin{1}) && ...
@@ -102,13 +113,33 @@ handles.axes2=axes('Parent',fig,'Units','normalized','Position',[0.842 0.402 0.0
 menus={...
   'hisfile','History file','hisfile_callback';...
   'gridfile','Grid file','gridfile_callback';...
-  'coastfile','Coastline file','coastfile_callback';...
+  'coastmenu','Coastline','';...
   'townfile','Town names file','townfile_callback';...
   'viewtopo','View bathymetry','viewtopo_Callback';...
   };
 for k=1:size(menus,1)
-  handles.(menus{k,1})=uimenu(fig,'Label',menus{k,2},'Tag',menus{k,1},'Callback',{@dispatch,menus{k,3}});
+  if isempty(menus{k,3})
+    handles.(menus{k,1})=uimenu(fig,'Label',menus{k,2},'Tag',menus{k,1});
+  else
+    handles.(menus{k,1})=uimenu(fig,'Label',menus{k,2},'Tag',menus{k,1},'Callback',{@dispatch,menus{k,3}});
+  end
 end
+%
+% Coastline menu: file, GSHHS resolutions, none
+%
+handles.hcst_file=uimenu(handles.coastmenu,'Label','Coastline file...','Tag','coastfile',...
+                         'Callback',{@dispatch,'coastfile_callback'});
+gres=gshhs_resolutions();
+for k=1:size(gres,1)
+  lab=['GSHHS ',gres{k,2},' resolution'];
+  if ~gshhs_installed(gres{k,1}), lab=[lab,' (not installed)']; end
+  handles.hcst_gshhs(k)=uimenu(handles.coastmenu,'Label',lab,'Tag',['gshhs_',gres{k,1}],...
+                         'Separator',ifelse_onoff(k==1),'Callback',{@gshhs_menu,gres{k,1}});
+end
+handles.hcst_none=uimenu(handles.coastmenu,'Label','No coastline','Tag','nocoast',...
+                         'Separator','on','Callback',{@dispatch,'remcoast_Callback'});
+handles.coastsrc='';                 % '' none, 'file', or GSHHS resolution c/l/i/h/f
+handles.coastfile=[];
 ctl={...
   'text2','text',{'Vertical Level:','>0 : S-level','<0 : Depth','=0 : ubar vec'},[0.9035 0.5794 0.1002 0.0652],'';...
   'update','pushbutton','Reset plot',[0.0248 0.9645 0.1101 0.0332],'update_Callback';...
@@ -279,7 +310,9 @@ handles.N=[];
 handles.T=[];
 handles.hmax=[];
 handles.ng=[];
-handles.coastfile=[];
+if ~isfield(handles,'coastsrc'), handles.coastsrc=''; end   % coastline choice kept
+if ~isfield(handles,'coastfile') || ~ischar(handles.coastfile), handles.coastfile=[]; end
+if ~strcmp(handles.coastsrc,'file'), handles.coastfile=[]; end   % GSHHS: extracted for the grid
 handles.vname='zeta';
 handles.vlevel=-10;
 handles.pltstyle=1;
@@ -401,6 +434,8 @@ if isequal([filename,pathname],[0,0])
 % Otherwise construct the fullfilename and Check and load the file.
 else
   handles.coastfile = fullfile(pathname,filename);
+  handles.coastsrc = 'file';
+  set_coast_checks(handles);
   if handles.plot==1
     inplot(h, eventdata, handles);
   else
@@ -414,12 +449,105 @@ return
 % ------------------------------------------------------------
 function varargout = remcoast_Callback(h, eventdata, handles, varargin_id)
 handles.coastfile=[];
+handles.coastsrc='';
+set_coast_checks(handles);
 if handles.plot==1
   inplot(h, eventdata, handles);
 else
   disp('Push ''PLOT'' button')
 end
 guidata(h,handles)
+return
+% ------------------------------------------------------------
+% Coastline menu: GSHHS coastline of the selected resolution
+% ------------------------------------------------------------
+function gshhs_menu(src,evt,res)
+fig = ancestor(src,'figure');
+handles = guidata(fig);
+gres = gshhs_resolutions();
+name = gres{strcmp(gres(:,1),res),2};
+if ~gshhs_installed(res)
+  errordlg({['GSHHS ',name,' resolution: file gshhs_',res,'.b not found in'],...
+            gshhs_dir(),...
+            'Install the GSHHS files there (see oct_make_gshhs_link).'},'CROCO_GUI');
+  return
+end
+handles.coastsrc = res;
+handles.coastfile = [];
+try
+  if ~isempty(handles.hisfile)
+    handles.coastfile = gshhs_coastfile(handles,res);
+  end
+catch err
+  set(fig,'Pointer','arrow');
+  handles.coastsrc = '';
+  set_coast_checks(handles); guidata(fig,handles);
+  errordlg(['GSHHS ',name,' coastline: ',err.message],'CROCO_GUI');
+  return
+end
+set_coast_checks(handles);
+guidata(fig,handles)
+if isempty(handles.hisfile)
+  return                                      % extracted when a file is opened
+end
+if handles.plot==1
+  inplot(fig, evt, handles);
+else
+  disp('Push ''PLOT'' button')
+end
+return
+% ------------------------------------------------------------
+%  GSHHS coastline around the grid (+10%), saved by m_gshhs_<res> in
+%  a MAT file (ncst, k, Area) of tempdir (reused for the same grid)
+% ------------------------------------------------------------
+function f = gshhs_coastfile(handles,res)
+gfile = handles.gridfile;
+if isempty(gfile), gfile = handles.hisfile; end
+ncid = netcdf.open(gfile,'NC_NOWRITE');
+lat = oct_readlat(ncid);
+lon = oct_readlon(ncid);
+netcdf.close(ncid);
+lon0=min(lon(:)); lon1=max(lon(:)); lat0=min(lat(:)); lat1=max(lat(:));
+dl = 0.1*max([lon1-lon0, lat1-lat0, 0.1]);
+lon0=lon0-dl; lon1=lon1+dl; lat0=max(lat0-dl,-89); lat1=min(lat1+dl,89);
+f = fullfile(tempdir,sprintf('croco_gui_gshhs_%s_%.2f_%.2f_%.2f_%.2f.mat',res,lon0,lon1,lat0,lat1));
+if exist(f,'file')
+  return
+end
+fig = handles.figure1;
+set(fig,'Pointer','watch'); drawnow
+gres = gshhs_resolutions();
+disp(['Extracting the GSHHS ',gres{strcmp(gres(:,1),res),2},' resolution coastline...'])
+m_proj('mercator','lon',[lon0 lon1],'lat',[lat0 lat1]);
+feval(['m_gshhs_',res],'save',f);
+set(fig,'Pointer','arrow');
+D = load(f);
+disp(sprintf('GSHHS coastline: %d points in %s',sum(isfinite(D.ncst(:,1))),f))
+return
+% ------------------------------------------------------------
+function r = gshhs_resolutions()
+r = {'c','crude';'l','low';'i','intermediate';'h','high';'f','full'};
+return
+function d = gshhs_dir()
+d = fullfile(fileparts(which('m_gshhs_l')),'private');
+return
+function ok = gshhs_installed(res)
+ok = exist(fullfile(gshhs_dir(),['gshhs_',res,'.b']),'file')==2;
+return
+function s = ifelse_onoff(c)
+if c, s='on'; else, s='off'; end
+return
+% ------------------------------------------------------------
+%  Check marks of the Coastline menu
+% ------------------------------------------------------------
+function set_coast_checks(handles)
+if ~isfield(handles,'hcst_file'), return, end
+gres = gshhs_resolutions();
+set(handles.hcst_file,'Checked',ifelse_onoff(strcmp(handles.coastsrc,'file')));
+for k=1:size(gres,1)
+  set(handles.hcst_gshhs(k),'Checked',ifelse_onoff(strcmp(handles.coastsrc,gres{k,1})));
+end
+set(handles.hcst_none,'Checked',ifelse_onoff(isempty(handles.coastsrc)));
 return
 % ------------------------------------------------------------
 % Callback for Open Townfile
@@ -557,6 +685,16 @@ set(handles.edittindex,'String',num2str(handles.tindex))
 set(handles.editvlev,'String',num2str(handles.vlevel))
 [~,nm,ext]=fileparts(handles.hisfile);
 set(handles.figure1,'Name',['CROCO HORIZONTAL PLOTTER - ',nm,ext]);
+if any(strcmp(handles.coastsrc,{'c','l','i','h','f'}))
+  try
+    handles.coastfile = gshhs_coastfile(handles,handles.coastsrc);
+  catch err
+    set(handles.figure1,'Pointer','arrow');
+    warning(['CROCO_GUI: GSHHS coastline not extracted: ',err.message]);
+    handles.coastsrc = ''; handles.coastfile = [];
+  end
+end
+set_coast_checks(handles);
 guidata(h,handles)
 if handles.plot==1
   inplot(h, eventdata, handles);
